@@ -86,10 +86,9 @@ export async function PUT(
 
       const adminClient = createAdminClient();
 
-      // Get user from Supabase Auth by email (more efficient than listUsers)
+      // Get user from Supabase Auth by email
       const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers({
-        filter: `email.eq.${targetUser.email}`,
-        perPage: 1,
+        perPage: 1000,
       });
 
       if (listError) {
@@ -97,7 +96,7 @@ export async function PUT(
         return NextResponse.json({ error: "Failed to update password" }, { status: 500 });
       }
 
-      const authUser = usersData.users[0];
+      const authUser = usersData.users.find(u => u.email === targetUser.email);
 
       if (authUser) {
         const { error: updateError } = await adminClient.auth.admin.updateUserById(authUser.id, {
