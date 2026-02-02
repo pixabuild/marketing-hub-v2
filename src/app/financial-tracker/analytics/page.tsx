@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDateFilter } from "../DateFilterContext";
 
 interface Category {
@@ -362,7 +362,7 @@ export default function AnalyticsPage() {
                       />
                     );
                     return acc;
-                  }, { elements: [] as JSX.Element[], offset: 0 }).elements}
+                  }, { elements: [] as React.ReactElement[], offset: 0 }).elements}
                 </svg>
                 <div className="donut-center">
                   <span className="donut-count">{expenseCategoryData.length}</span>
@@ -419,7 +419,7 @@ export default function AnalyticsPage() {
                       />
                     );
                     return acc;
-                  }, { elements: [] as JSX.Element[], offset: 0 }).elements}
+                  }, { elements: [] as React.ReactElement[], offset: 0 }).elements}
                 </svg>
                 <div className="donut-center">
                   <span className="donut-count">{incomeCategoryData.length}</span>
