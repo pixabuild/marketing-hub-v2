@@ -10,6 +10,7 @@ interface Expense {
   description: string | null;
   amount: number;
   expenseType: string;
+  frequency: string | null;
   expenseDate: string;
 }
 
@@ -37,6 +38,7 @@ export default function ExpensesPage() {
     description: "",
     amount: "",
     expenseType: "one-time",
+    frequency: "monthly",
     expenseDate: new Date().toISOString().split("T")[0],
   });
 
@@ -94,6 +96,7 @@ export default function ExpensesPage() {
           description: formData.description,
           amount: parseFloat(formData.amount),
           expenseType: formData.expenseType,
+          frequency: formData.expenseType === "recurring" ? formData.frequency : null,
           expenseDate: formData.expenseDate,
         }),
       });
@@ -106,12 +109,18 @@ export default function ExpensesPage() {
           description: "",
           amount: "",
           expenseType: "one-time",
+          frequency: "monthly",
           expenseDate: new Date().toISOString().split("T")[0],
         });
         fetchExpenses();
+      } else {
+        const errorData = await res.json();
+        console.error("API error:", errorData);
+        alert("Failed to save expense: " + (errorData.error || "Unknown error"));
       }
     } catch (error) {
       console.error("Error saving expense:", error);
+      alert("Failed to save expense. Check console for details.");
     } finally {
       setSubmitting(false);
     }
@@ -137,6 +146,7 @@ export default function ExpensesPage() {
       description: expense.description || "",
       amount: expense.amount.toString(),
       expenseType: expense.expenseType,
+      frequency: expense.frequency || "monthly",
       expenseDate: expense.expenseDate.split("T")[0],
     });
     setShowModal(true);
@@ -149,6 +159,7 @@ export default function ExpensesPage() {
       description: "",
       amount: "",
       expenseType: "one-time",
+      frequency: "monthly",
       expenseDate: new Date().toISOString().split("T")[0],
     });
     setShowModal(true);
@@ -318,6 +329,21 @@ export default function ExpensesPage() {
                     <option value="recurring">Recurring</option>
                   </select>
                 </div>
+                {formData.expenseType === "recurring" && (
+                  <div className="field">
+                    <label>Frequency</label>
+                    <select
+                      value={formData.frequency}
+                      onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="biweekly">Bi-weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
+                )}
                 <div className="field">
                   <label>Date</label>
                   <input
