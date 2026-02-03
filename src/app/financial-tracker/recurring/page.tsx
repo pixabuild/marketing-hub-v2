@@ -43,6 +43,7 @@ export default function RecurringPage() {
     frequency: "monthly",
     startDate: new Date().toISOString().split("T")[0],
   });
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -172,6 +173,38 @@ export default function RecurringPage() {
     }
   };
 
+  const processDueRecurring = async () => {
+    setProcessing(true);
+    try {
+      const res = await fetch("/api/recurring/process", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.processed > 0) {
+          alert(`Processed ${data.processed} recurring transaction(s). Transactions have been created.`);
+          fetchData(); // Refresh the list to update nextDate values
+        } else {
+          alert("No due recurring transactions to process.");
+        }
+      } else {
+        alert("Failed to process recurring transactions.");
+      }
+    } catch (error) {
+      console.error("Error processing recurring:", error);
+      alert("Error processing recurring transactions.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Count due recurring transactions
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dueCount = recurring.filter((r) => {
+    const nextDate = new Date(r.nextDate);
+    nextDate.setHours(0, 0, 0, 0);
+    return r.isActive && nextDate <= today;
+  }).length;
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -201,6 +234,15 @@ export default function RecurringPage() {
       <div className="section-top">
         <h2 className="section-title">Recurring Transactions</h2>
         <div className="section-actions">
+          {dueCount > 0 && (
+            <button
+              className="btn btn-secondary"
+              onClick={processDueRecurring}
+              disabled={processing}
+            >
+              {processing ? "Processing..." : `Process Due (${dueCount})`}
+            </button>
+          )}
           <button className="btn btn-glow" onClick={openAddModal}>
             <span>+</span> Add Recurring
           </button>
