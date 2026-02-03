@@ -25,7 +25,7 @@ const categories = [
 ];
 
 export default function ExpensesPage() {
-  const { filter, getDateRange, selectedProject, isAdmin } = useDateFilter();
+  const { filter, getDateRange, selectedProject, isAdmin, refreshStats } = useDateFilter();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -113,6 +113,7 @@ export default function ExpensesPage() {
           expenseDate: new Date().toISOString().split("T")[0],
         });
         fetchExpenses();
+        refreshStats();
       } else {
         const errorData = await res.json();
         console.error("API error:", errorData);
@@ -133,6 +134,7 @@ export default function ExpensesPage() {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       if (res.ok) {
         fetchExpenses();
+        refreshStats();
       }
     } catch (error) {
       console.error("Error deleting expense:", error);

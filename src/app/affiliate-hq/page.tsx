@@ -19,7 +19,7 @@ interface Platform {
 }
 
 export default function AffiliateHQSales() {
-  const { filter, getDateRange, selectedProject, isAdmin } = useDateFilter();
+  const { filter, getDateRange, selectedProject, isAdmin, refreshStats } = useDateFilter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [platformFilter, setPlatformFilter] = useState("all");
@@ -128,6 +128,7 @@ export default function AffiliateHQSales() {
           saleDate: new Date().toISOString().split("T")[0],
         });
         fetchSales();
+        refreshStats();
       }
     } catch (error) {
       console.error("Error saving sale:", error);
@@ -141,6 +142,7 @@ export default function AffiliateHQSales() {
       const res = await fetch(`/api/sales/${sale.id}`, { method: "DELETE" });
       if (res.ok) {
         fetchSales();
+        refreshStats();
       }
     } catch (error) {
       console.error("Error deleting sale:", error);

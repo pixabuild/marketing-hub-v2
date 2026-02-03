@@ -34,6 +34,7 @@ interface DateFilterContextType {
   addProject: (name: string, description?: string) => Promise<Project | null>;
   updateProject: (id: string, name: string) => Promise<Project | null>;
   deleteProject: (id: string) => Promise<boolean>;
+  refreshStats: () => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -151,42 +152,49 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
     fetchUserRole();
   }, []);
 
+  // Function to fetch stats - can be called manually to refresh
+  const fetchStats = useCallback(async () => {
+    if (!selectedProject) return;
+    setLoading(true);
+    try {
+      const { start, end } = getDateRange();
+      const params = new URLSearchParams({
+        projectId: selectedProject,
+        ...(start && { startDate: start }),
+        ...(end && { endDate: end }),
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`/api/dashboard?${params}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        setStats({
+          sales: data.period.revenue || 0,
+          expenses: data.period.expenses || 0,
+          profit: data.period.profit || 0,
+        });
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error fetching stats:", error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedProject, getDateRange]);
+
   // Fetch dashboard stats when project or filter changes
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!selectedProject) return;
-      setLoading(true);
-      try {
-        const { start, end } = getDateRange();
-        const params = new URLSearchParams({
-          projectId: selectedProject,
-          ...(start && { startDate: start }),
-          ...(end && { endDate: end }),
-        });
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(`/api/dashboard?${params}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
-        if (res.ok) {
-          const data = await res.json();
-          setStats({
-            sales: data.period.revenue || 0,
-            expenses: data.period.expenses || 0,
-            profit: data.period.profit || 0,
-          });
-        }
-      } catch (error) {
-        if ((error as Error).name !== "AbortError") {
-          console.error("Error fetching stats:", error);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
-  }, [selectedProject, filter, customRange, getDateRange]);
+  }, [selectedProject, filter, customRange, fetchStats]);
+
+  // Expose refreshStats for components to call after data changes
+  const refreshStats = useCallback(async () => {
+    await fetchStats();
+  }, [fetchStats]);
 
   const addProject = async (name: string, description?: string): Promise<Project | null> => {
     try {
@@ -264,6 +272,7 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
         addProject,
         updateProject,
         deleteProject,
+        refreshStats,
         isAdmin,
       }}
     >
