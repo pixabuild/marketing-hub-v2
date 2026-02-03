@@ -334,7 +334,7 @@ export default function TrafficPage() {
               </div>
               <div className="data-meta">
                 <span className="badge">{item.clicks.toLocaleString()} clicks</span>
-                <span className="badge">{item.optins.toLocaleString()} optins</span>
+                <span className="badge">{item.optins.toLocaleString()} opens</span>
                 {item.clicks > 0 && (
                   <span className="badge">{((item.optins / item.clicks) * 100).toFixed(1)}% rate</span>
                 )}
@@ -406,7 +406,7 @@ export default function TrafficPage() {
                   />
                 </div>
                 <div className="field">
-                  <label>Optins</label>
+                  <label>Opens</label>
                   <input
                     type="number"
                     value={formData.optins}

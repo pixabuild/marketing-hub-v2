@@ -155,7 +155,7 @@ export default function TransactionsPage() {
 
   // Group transactions by date
   const groupedTransactions = filteredTransactions.reduce((groups, tx) => {
-    const date = new Date(tx.date).toDateString();
+    const date = new Date(tx.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
     if (!groups[date]) {
       groups[date] = [];
     }

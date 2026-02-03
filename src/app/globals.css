@@ -2015,6 +2015,22 @@ tbody tr:hover {
   gap: 8px;
 }
 
+/* Date Group Headers */
+.data-date-group {
+  padding: 16px 20px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.data-date-group:first-child {
+  margin-top: 0;
+}
+
 /* Empty State */
 .empty {
   text-align: center;
