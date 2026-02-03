@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { syncExpenseToTransaction } from "@/lib/sync";
+import { syncExpenseToTransaction, syncExpenseToRecurringTransaction } from "@/lib/sync";
 
 // Helper to get user's accessible project IDs
 async function getUserProjectIds(userId: string, role: string): Promise<string[]> {
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { projectId, category, description, amount, expenseType, expenseDate } = body;
+    const { projectId, category, description, amount, expenseType, frequency, expenseDate } = body;
 
     if (!projectId || !category || amount === undefined || !expenseDate) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -93,12 +93,20 @@ export async function POST(request: NextRequest) {
         description: description || null,
         amount: parseFloat(amount),
         expenseType: expenseType || "one-time",
+        frequency: expenseType === "recurring" ? (frequency || "monthly") : null,
         expenseDate: new Date(expenseDate),
       },
     });
 
-    // Sync to Financial Tracker
-    await syncExpenseToTransaction(expense, project?.name);
+    // Sync to Financial Tracker - use recurring sync for recurring expenses
+    if (expenseType === "recurring") {
+      await syncExpenseToRecurringTransaction({
+        ...expense,
+        frequency: frequency || "monthly",
+      }, project?.name);
+    } else {
+      await syncExpenseToTransaction(expense, project?.name);
+    }
 
     return NextResponse.json(expense, { status: 201 });
   } catch (error) {

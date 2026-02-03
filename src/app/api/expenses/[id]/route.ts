@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
-import { syncExpenseToTransaction, deleteSyncedTransaction } from "@/lib/sync";
+import { syncExpenseToTransaction, syncExpenseToRecurringTransaction, deleteSyncedTransaction, deleteSyncedRecurringTransaction } from "@/lib/sync";
 
 // Helper to get user's accessible project IDs
 async function getUserProjectIds(userId: string, role: string): Promise<string[]> {
@@ -36,7 +36,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { category, description, amount, expenseType, expenseDate } = body;
+    const { category, description, amount, expenseType, frequency, expenseDate } = body;
 
     // Verify user has access
     const projectIds = await getUserProjectIds(user.id, user.role);
@@ -48,6 +48,23 @@ export async function PUT(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
+    const oldExpenseType = existingExpense.expenseType;
+    const newExpenseType = expenseType || oldExpenseType;
+
+    // If expense type is changing, delete old synced entry
+    if (oldExpenseType !== newExpenseType && existingExpense.externalId) {
+      if (oldExpenseType === "recurring") {
+        await deleteSyncedRecurringTransaction(existingExpense.externalId);
+      } else {
+        await deleteSyncedTransaction(existingExpense.externalId);
+      }
+      // Clear externalId so new sync creates fresh entry
+      await prisma.expense.update({
+        where: { id },
+        data: { externalId: null },
+      });
+    }
+
     const expense = await prisma.expense.update({
       where: { id },
       data: {
@@ -55,13 +72,21 @@ export async function PUT(
         ...(description !== undefined && { description }),
         ...(amount !== undefined && { amount: parseFloat(amount) }),
         ...(expenseType && { expenseType }),
+        ...(frequency !== undefined && { frequency: newExpenseType === "recurring" ? (frequency || "monthly") : null }),
         ...(expenseDate && { expenseDate: new Date(expenseDate) }),
       },
       include: { project: { select: { name: true } } },
     });
 
-    // Sync to Financial Tracker
-    await syncExpenseToTransaction(expense, expense.project?.name);
+    // Sync to Financial Tracker - use recurring sync for recurring expenses
+    if (newExpenseType === "recurring") {
+      await syncExpenseToRecurringTransaction({
+        ...expense,
+        frequency: expense.frequency || "monthly",
+      }, expense.project?.name);
+    } else {
+      await syncExpenseToTransaction(expense, expense.project?.name);
+    }
 
     return NextResponse.json(expense);
   } catch (error) {
@@ -85,10 +110,10 @@ export async function DELETE(
 
     const projectIds = await getUserProjectIds(user.id, user.role);
 
-    // Get the expense first to get the externalId
+    // Get the expense first to get the externalId and type
     const existingExpense = await prisma.expense.findFirst({
       where: { id, projectId: { in: projectIds } },
-      select: { externalId: true },
+      select: { externalId: true, expenseType: true },
     });
 
     if (!existingExpense) {
@@ -99,8 +124,12 @@ export async function DELETE(
       where: { id },
     });
 
-    // Delete synced transaction in Financial Tracker
-    await deleteSyncedTransaction(existingExpense.externalId);
+    // Delete synced entry in Financial Tracker (correct type based on expense type)
+    if (existingExpense.expenseType === "recurring") {
+      await deleteSyncedRecurringTransaction(existingExpense.externalId);
+    } else {
+      await deleteSyncedTransaction(existingExpense.externalId);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

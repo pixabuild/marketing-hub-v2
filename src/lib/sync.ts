@@ -138,6 +138,85 @@ export async function syncExpenseToTransaction(expense: {
   }
 }
 
+// Sync a recurring expense to the Financial Tracker as a recurring transaction
+export async function syncExpenseToRecurringTransaction(expense: {
+  id: string;
+  category: string;
+  description?: string | null;
+  amount: number;
+  expenseDate: Date;
+  frequency?: string | null;
+  externalId?: string | null;
+}, projectName?: string) {
+  const desc = expense.description
+    ? `${expense.description} (${expense.category})`
+    : expense.category;
+  const fullDescription = projectName ? `${desc} - ${projectName}` : desc;
+
+  const categoryId = await getAffiliateExpensesCategory();
+
+  // Map frequency from affiliate to financial tracker format
+  const frequencyMap: Record<string, string> = {
+    'daily': 'daily',
+    'weekly': 'weekly',
+    'biweekly': 'biweekly',
+    'monthly': 'monthly',
+    'yearly': 'yearly',
+  };
+  const frequency = frequencyMap[expense.frequency || 'monthly'] || 'monthly';
+
+  if (expense.externalId) {
+    // Update existing recurring transaction
+    await prisma.recurringTransaction.update({
+      where: { id: expense.externalId },
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        startDate: expense.expenseDate,
+        frequency,
+        categoryId,
+      },
+    });
+  } else {
+    // Create new recurring transaction and link it
+    const recurringTx = await prisma.recurringTransaction.create({
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        type: "expense",
+        startDate: expense.expenseDate,
+        nextDate: expense.expenseDate,
+        frequency,
+        isActive: true,
+        source: "affiliatehq",
+        externalId: expense.id,
+        categoryId,
+      },
+    });
+
+    // Update expense with the recurring transaction ID
+    await prisma.expense.update({
+      where: { id: expense.id },
+      data: { externalId: recurringTx.id },
+    });
+
+    return recurringTx;
+  }
+}
+
+// Delete synced recurring transaction when recurring expense is deleted
+export async function deleteSyncedRecurringTransaction(externalId: string | null) {
+  if (!externalId) return;
+
+  try {
+    await prisma.recurringTransaction.delete({
+      where: { id: externalId },
+    });
+  } catch {
+    // Recurring transaction may not exist or already deleted
+  }
+}
+
 // Delete synced transaction when sale is deleted
 export async function deleteSyncedTransaction(externalId: string | null) {
   if (!externalId) return;
