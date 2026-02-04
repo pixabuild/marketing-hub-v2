@@ -25,6 +25,7 @@ export default function TransactionsPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [formData, setFormData] = useState({
     description: "",
@@ -149,9 +150,11 @@ export default function TransactionsPage() {
     }).format(amount);
   };
 
-  const filteredTransactions = typeFilter === "all"
-    ? transactions
-    : transactions.filter((t) => t.type === typeFilter);
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesType = typeFilter === "all" || t.type === typeFilter;
+    const matchesCategory = categoryFilter === "all" || t.categoryId === categoryFilter;
+    return matchesType && matchesCategory;
+  });
 
   // Group transactions by date
   const groupedTransactions = filteredTransactions.reduce((groups, tx) => {
@@ -192,6 +195,16 @@ export default function TransactionsPage() {
           <option value="all">All Transactions</option>
           <option value="income">Income Only</option>
           <option value="expense">Expenses Only</option>
+        </select>
+        <select
+          className="filter-select"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
+          <option value="all">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
         </select>
       </div>
 
