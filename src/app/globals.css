@@ -454,7 +454,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   gap: 4px;
   position: relative;
   animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
