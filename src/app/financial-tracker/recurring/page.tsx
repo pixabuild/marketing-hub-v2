@@ -34,6 +34,7 @@ export default function RecurringPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [typeFilter, setTypeFilter] = useState("all");
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [formData, setFormData] = useState({
     description: "",
@@ -220,6 +221,10 @@ export default function RecurringPage() {
     });
   };
 
+  const filteredRecurring = typeFilter === "all"
+    ? recurring
+    : recurring.filter((r) => r.type === typeFilter);
+
   if (loading) {
     return (
       <div className="empty">
@@ -249,8 +254,20 @@ export default function RecurringPage() {
         </div>
       </div>
 
+      <div className="filter-bar">
+        <select
+          className="filter-select"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+        >
+          <option value="all">All Recurring</option>
+          <option value="income">Income Only</option>
+          <option value="expense">Expenses Only</option>
+        </select>
+      </div>
+
       <div className="data-list">
-        {recurring.length === 0 ? (
+        {filteredRecurring.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
               <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -261,7 +278,7 @@ export default function RecurringPage() {
             <p>Set up automatic income and expenses</p>
           </div>
         ) : (
-          recurring.map((r) => (
+          filteredRecurring.map((r) => (
             <div key={r.id} className={`data-item ${!r.isActive ? 'opacity-50' : ''}`}>
               <div className={`data-indicator ${r.type}`}>
                 {r.type === 'income' ? '+' : '-'}
