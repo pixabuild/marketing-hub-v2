@@ -2513,6 +2513,7 @@ tbody tr:hover {
 /* View styling for apps (inside .app container) */
 .app .view.active {
   display: block;
+  padding: 0;
   animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.5s backwards;
 }
 
