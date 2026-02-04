@@ -44,6 +44,7 @@ export default function RecurringPage() {
     startDate: new Date().toISOString().split("T")[0],
   });
   const [processing, setProcessing] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
     fetchData();
@@ -220,6 +221,10 @@ export default function RecurringPage() {
     });
   };
 
+  const filteredRecurring = categoryFilter === "all"
+    ? recurring
+    : recurring.filter((r) => r.categoryId === categoryFilter);
+
   if (loading) {
     return (
       <div className="empty">
@@ -249,8 +254,21 @@ export default function RecurringPage() {
         </div>
       </div>
 
+      <div className="filter-bar">
+        <select
+          className="filter-select"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+        >
+          <option value="all">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="data-list">
-        {recurring.length === 0 ? (
+        {filteredRecurring.length === 0 ? (
           <div className="empty">
             <div className="empty-icon">
               <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -261,7 +279,7 @@ export default function RecurringPage() {
             <p>Set up automatic income and expenses</p>
           </div>
         ) : (
-          recurring.map((r) => (
+          filteredRecurring.map((r) => (
             <div key={r.id} className={`data-item ${!r.isActive ? 'opacity-50' : ''}`}>
               <div className={`data-indicator ${r.type}`}>
                 {r.type === 'income' ? '+' : '-'}
