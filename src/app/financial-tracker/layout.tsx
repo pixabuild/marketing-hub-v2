@@ -13,7 +13,6 @@ function FinancialTrackerLayoutInner({ children }: { children: React.ReactNode }
     { name: "Transactions", href: "/financial-tracker" },
     { name: "Recurring", href: "/financial-tracker/recurring" },
     { name: "Categories", href: "/financial-tracker/categories" },
-    { name: "Budgets", href: "/financial-tracker/budgets" },
     { name: "Analytics", href: "/financial-tracker/analytics" },
   ];
 

@@ -7,14 +7,23 @@ interface Category {
   name: string;
   type: "income" | "expense";
   color: string;
+  _count?: { transactions: number };
+  total?: number;
 }
 
 const colors = [
   "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899",
 ];
 
+interface Transaction {
+  id: string;
+  categoryId: string | null;
+  amount: number;
+}
+
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTotals, setCategoryTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -26,24 +35,52 @@ export default function CategoriesPage() {
   });
 
   useEffect(() => {
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const fetchCategories = async () => {
+  const fetchData = async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const res = await fetch("/api/categories", { signal: controller.signal });
+      const [catRes, txRes] = await Promise.all([
+        fetch("/api/categories", { signal: controller.signal }),
+        fetch("/api/transactions", { signal: controller.signal }),
+      ]);
+
+      if (catRes.ok) {
+        const data = await catRes.json();
+        setCategories(data);
+      }
+
+      if (txRes.ok) {
+        const transactions: Transaction[] = await txRes.json();
+        // Calculate totals per category
+        const totals: Record<string, number> = {};
+        transactions.forEach((tx) => {
+          if (tx.categoryId) {
+            totals[tx.categoryId] = (totals[tx.categoryId] || 0) + tx.amount;
+          }
+        });
+        setCategoryTotals(totals);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
       if (res.ok) {
         const data = await res.json();
         setCategories(data);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
-    } finally {
-      clearTimeout(timeoutId);
-      setLoading(false);
     }
   };
 
@@ -119,6 +156,13 @@ export default function CategoriesPage() {
   const incomeCategories = categories.filter(c => c.type === "income");
   const expenseCategories = categories.filter(c => c.type === "expense");
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <div className="empty">
@@ -154,10 +198,13 @@ export default function CategoriesPage() {
               </div>
             ) : (
               incomeCategories.map((cat) => (
-                <div key={cat.id} className="data-item" style={{ gridTemplateColumns: 'auto 1fr auto' }}>
+                <div key={cat.id} className="data-item" style={{ gridTemplateColumns: 'auto 1fr auto auto' }}>
                   <div className="category-color" style={{ backgroundColor: cat.color }}></div>
                   <div className="data-details">
                     <div className="data-title">{cat.name}</div>
+                  </div>
+                  <div className="data-amount income">
+                    {formatCurrency(categoryTotals[cat.id] || 0)}
                   </div>
                   <div className="data-actions">
                     <button className="action-btn edit" onClick={() => openEditModal(cat)} title="Edit">
@@ -191,10 +238,13 @@ export default function CategoriesPage() {
               </div>
             ) : (
               expenseCategories.map((cat) => (
-                <div key={cat.id} className="data-item" style={{ gridTemplateColumns: 'auto 1fr auto' }}>
+                <div key={cat.id} className="data-item" style={{ gridTemplateColumns: 'auto 1fr auto auto' }}>
                   <div className="category-color" style={{ backgroundColor: cat.color }}></div>
                   <div className="data-details">
                     <div className="data-title">{cat.name}</div>
+                  </div>
+                  <div className="data-amount expense">
+                    {formatCurrency(categoryTotals[cat.id] || 0)}
                   </div>
                   <div className="data-actions">
                     <button className="action-btn edit" onClick={() => openEditModal(cat)} title="Edit">
