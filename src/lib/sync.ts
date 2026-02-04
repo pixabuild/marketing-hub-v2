@@ -53,55 +53,38 @@ export async function syncSaleToTransaction(sale: {
   const categoryId = await getAffiliateSalesCategory();
 
   if (sale.externalId) {
-    // Try to update existing transaction
-    try {
-      const existing = await prisma.transaction.findUnique({
-        where: { id: sale.externalId },
-      });
+    // Update existing transaction
+    await prisma.transaction.update({
+      where: { id: sale.externalId },
+      data: {
+        description,
+        amount: sale.amount,
+        date: sale.saleDate,
+        categoryId,
+      },
+    });
+  } else {
+    // Create new transaction and link it
+    const transaction = await prisma.transaction.create({
+      data: {
+        description,
+        amount: sale.amount,
+        type: "income",
+        date: sale.saleDate,
+        source: "affiliatehq",
+        externalId: sale.id,
+        categoryId,
+      },
+    });
 
-      if (existing) {
-        await prisma.transaction.update({
-          where: { id: sale.externalId },
-          data: {
-            description,
-            amount: sale.amount,
-            date: sale.saleDate,
-            categoryId,
-          },
-        });
-        return;
-      }
-    } catch {
-      // Record doesn't exist, fall through to create new one
-    }
-
-    // Clear the invalid externalId and create new
+    // Update sale with the transaction ID
     await prisma.dailySale.update({
       where: { id: sale.id },
-      data: { externalId: null },
+      data: { externalId: transaction.id },
     });
+
+    return transaction;
   }
-
-  // Create new transaction and link it
-  const transaction = await prisma.transaction.create({
-    data: {
-      description,
-      amount: sale.amount,
-      type: "income",
-      date: sale.saleDate,
-      source: "affiliatehq",
-      externalId: sale.id,
-      categoryId,
-    },
-  });
-
-  // Update sale with the transaction ID
-  await prisma.dailySale.update({
-    where: { id: sale.id },
-    data: { externalId: transaction.id },
-  });
-
-  return transaction;
 }
 
 // Sync an expense to the Financial Tracker as a transaction
@@ -121,55 +104,38 @@ export async function syncExpenseToTransaction(expense: {
   const categoryId = await getAffiliateExpensesCategory();
 
   if (expense.externalId) {
-    // Try to update existing transaction
-    try {
-      const existing = await prisma.transaction.findUnique({
-        where: { id: expense.externalId },
-      });
+    // Update existing transaction
+    await prisma.transaction.update({
+      where: { id: expense.externalId },
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        date: expense.expenseDate,
+        categoryId,
+      },
+    });
+  } else {
+    // Create new transaction and link it
+    const transaction = await prisma.transaction.create({
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        type: "expense",
+        date: expense.expenseDate,
+        source: "affiliatehq",
+        externalId: expense.id,
+        categoryId,
+      },
+    });
 
-      if (existing) {
-        await prisma.transaction.update({
-          where: { id: expense.externalId },
-          data: {
-            description: fullDescription,
-            amount: expense.amount,
-            date: expense.expenseDate,
-            categoryId,
-          },
-        });
-        return;
-      }
-    } catch {
-      // Record doesn't exist, fall through to create new one
-    }
-
-    // Clear the invalid externalId and create new
+    // Update expense with the transaction ID
     await prisma.expense.update({
       where: { id: expense.id },
-      data: { externalId: null },
+      data: { externalId: transaction.id },
     });
+
+    return transaction;
   }
-
-  // Create new transaction and link it
-  const transaction = await prisma.transaction.create({
-    data: {
-      description: fullDescription,
-      amount: expense.amount,
-      type: "expense",
-      date: expense.expenseDate,
-      source: "affiliatehq",
-      externalId: expense.id,
-      categoryId,
-    },
-  });
-
-  // Update expense with the transaction ID
-  await prisma.expense.update({
-    where: { id: expense.id },
-    data: { externalId: transaction.id },
-  });
-
-  return transaction;
 }
 
 // Sync a recurring expense to the Financial Tracker as a recurring transaction
@@ -200,59 +166,42 @@ export async function syncExpenseToRecurringTransaction(expense: {
   const frequency = frequencyMap[expense.frequency || 'monthly'] || 'monthly';
 
   if (expense.externalId) {
-    // Try to update existing recurring transaction
-    try {
-      const existing = await prisma.recurringTransaction.findUnique({
-        where: { id: expense.externalId },
-      });
+    // Update existing recurring transaction
+    await prisma.recurringTransaction.update({
+      where: { id: expense.externalId },
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        startDate: expense.expenseDate,
+        frequency,
+        categoryId,
+      },
+    });
+  } else {
+    // Create new recurring transaction and link it
+    const recurringTx = await prisma.recurringTransaction.create({
+      data: {
+        description: fullDescription,
+        amount: expense.amount,
+        type: "expense",
+        startDate: expense.expenseDate,
+        nextDate: expense.expenseDate,
+        frequency,
+        isActive: true,
+        source: "affiliatehq",
+        externalId: expense.id,
+        categoryId,
+      },
+    });
 
-      if (existing) {
-        await prisma.recurringTransaction.update({
-          where: { id: expense.externalId },
-          data: {
-            description: fullDescription,
-            amount: expense.amount,
-            startDate: expense.expenseDate,
-            frequency,
-            categoryId,
-          },
-        });
-        return;
-      }
-    } catch {
-      // Record doesn't exist, fall through to create new one
-    }
-
-    // Clear the invalid externalId and create new
+    // Update expense with the recurring transaction ID
     await prisma.expense.update({
       where: { id: expense.id },
-      data: { externalId: null },
+      data: { externalId: recurringTx.id },
     });
+
+    return recurringTx;
   }
-
-  // Create new recurring transaction and link it
-  const recurringTx = await prisma.recurringTransaction.create({
-    data: {
-      description: fullDescription,
-      amount: expense.amount,
-      type: "expense",
-      startDate: expense.expenseDate,
-      nextDate: expense.expenseDate,
-      frequency,
-      isActive: true,
-      source: "affiliatehq",
-      externalId: expense.id,
-      categoryId,
-    },
-  });
-
-  // Update expense with the recurring transaction ID
-  await prisma.expense.update({
-    where: { id: expense.id },
-    data: { externalId: recurringTx.id },
-  });
-
-  return recurringTx;
 }
 
 // Delete synced recurring transaction when recurring expense is deleted
