@@ -4,15 +4,11 @@ import { useState, useMemo } from "react";
 import { useTodoContext } from "./TodoContext";
 
 export default function TodosPage() {
-  const { categories, todos, pinnedNotes, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask, addPinnedNote, updatePinnedNote, deletePinnedNote } = useTodoContext();
+  const { categories, todos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask } = useTodoContext();
   const [showModal, setShowModal] = useState(false);
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [draggedTodo, setDraggedTodo] = useState<string | null>(null);
   const [newSubtaskText, setNewSubtaskText] = useState("");
-  const [newPinnedNoteText, setNewPinnedNoteText] = useState("");
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editingNoteText, setEditingNoteText] = useState("");
-  const [showNotesPanel, setShowNotesPanel] = useState(true);
 
   // Get the current editing todo from todos array (stays in sync)
   const editingTodo = useMemo(() => {
@@ -132,29 +128,6 @@ export default function TodosPage() {
     await deleteSubtask(todoId, subtaskId);
   };
 
-  // Pinned notes handlers
-  const handleAddPinnedNote = async () => {
-    if (!newPinnedNoteText.trim()) return;
-    await addPinnedNote(newPinnedNoteText.trim());
-    setNewPinnedNoteText("");
-  };
-
-  const handleStartEditNote = (note: { id: string; text: string }) => {
-    setEditingNoteId(note.id);
-    setEditingNoteText(note.text);
-  };
-
-  const handleSaveEditNote = async () => {
-    if (!editingNoteId || !editingNoteText.trim()) return;
-    await updatePinnedNote(editingNoteId, editingNoteText.trim());
-    setEditingNoteId(null);
-    setEditingNoteText("");
-  };
-
-  const handleDeletePinnedNote = async (id: string) => {
-    await deletePinnedNote(id);
-  };
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "#ef4444";
@@ -236,23 +209,9 @@ export default function TodosPage() {
     <>
       <div className="board-header">
         <h2 className="board-title">All Tasks</h2>
-        <button
-          className="toggle-notes-btn"
-          onClick={() => setShowNotesPanel(!showNotesPanel)}
-          title={showNotesPanel ? "Hide notes" : "Show notes"}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          {showNotesPanel ? "Hide" : "Notes"}
-        </button>
       </div>
 
-      <div className="board-layout">
-        <div className="kanban-board">
+      <div className="kanban-board">
         {/* To Do Column */}
         <div
           className="kanban-column"
@@ -306,66 +265,6 @@ export default function TodosPage() {
             {columns.done.map((todo) => renderNote(todo, "completed"))}
           </div>
         </div>
-        </div>
-
-        {/* Pinned Notes Panel */}
-        {showNotesPanel && (
-          <div className="pinned-notes-panel">
-            <div className="pinned-notes-header">
-              <h3>📌 Pinned Notes</h3>
-            </div>
-            <div className="pinned-notes-list">
-              {pinnedNotes.map((note) => (
-                <div key={note.id} className="pinned-note" style={{ backgroundColor: note.color }}>
-                  {editingNoteId === note.id ? (
-                    <div className="pinned-note-edit">
-                      <textarea
-                        value={editingNoteText}
-                        onChange={(e) => setEditingNoteText(e.target.value)}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSaveEditNote();
-                          }
-                          if (e.key === "Escape") {
-                            setEditingNoteId(null);
-                          }
-                        }}
-                      />
-                      <div className="pinned-note-edit-actions">
-                        <button onClick={handleSaveEditNote}>Save</button>
-                        <button onClick={() => setEditingNoteId(null)}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="pinned-note-text">{note.text}</p>
-                      <div className="pinned-note-actions">
-                        <button onClick={() => handleStartEditNote(note)} title="Edit">✎</button>
-                        <button onClick={() => handleDeletePinnedNote(note.id)} title="Delete">×</button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="pinned-note-add">
-              <textarea
-                value={newPinnedNoteText}
-                onChange={(e) => setNewPinnedNoteText(e.target.value)}
-                placeholder="Add a pinned note..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAddPinnedNote();
-                  }
-                }}
-              />
-              <button onClick={handleAddPinnedNote}>+ Add</button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Edit/Add Modal */}
@@ -474,6 +373,17 @@ export default function TodosPage() {
           </div>
         </div>
       )}
+
+<style jsx>{`
+        .board-header {
+          margin-bottom: 24px;
+        }
+        .board-title {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+      `}</style>
     </>
   );
 }
