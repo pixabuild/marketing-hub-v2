@@ -2,12 +2,10 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 
-interface TodoProject {
+interface Subtask {
   id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  _count: { todos: number };
+  text: string;
+  completed: boolean;
 }
 
 interface TodoCategory {
@@ -24,8 +22,8 @@ interface Todo {
   completed: boolean;
   priority: string;
   dueDate: string | null;
-  projectId: string | null;
   categoryId: string | null;
+  subtasks: Subtask[];
   createdAt: string;
   updatedAt: string;
 }
@@ -38,22 +36,19 @@ interface Stats {
 }
 
 interface TodoContextType {
-  projects: TodoProject[];
   categories: TodoCategory[];
   todos: Todo[];
-  selectedProject: string | null;
-  setSelectedProject: (id: string | null) => void;
   stats: Stats;
   loading: boolean;
-  addProject: (name: string, description?: string, color?: string) => Promise<TodoProject | null>;
-  updateProject: (id: string, name: string, description?: string, color?: string) => Promise<TodoProject | null>;
-  deleteProject: (id: string) => Promise<boolean>;
   addCategory: (name: string, color?: string) => Promise<TodoCategory | null>;
   updateCategory: (id: string, name: string, color?: string) => Promise<TodoCategory | null>;
   deleteCategory: (id: string) => Promise<boolean>;
-  addTodo: (todo: Omit<Todo, "id" | "createdAt" | "updatedAt">) => Promise<Todo | null>;
+  addTodo: (todo: Omit<Todo, "id" | "createdAt" | "updatedAt" | "subtasks"> & { subtasks?: Subtask[] }) => Promise<Todo | null>;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<Todo | null>;
   deleteTodo: (id: string) => Promise<boolean>;
+  addSubtask: (todoId: string, text: string) => Promise<boolean>;
+  updateSubtask: (todoId: string, subtaskId: string, updates: Partial<Subtask>) => Promise<boolean>;
+  deleteSubtask: (todoId: string, subtaskId: string) => Promise<boolean>;
   refreshData: () => void;
 }
 
@@ -62,21 +57,12 @@ const TodoContext = createContext<TodoContextType | undefined>(undefined);
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export function TodoProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<TodoProject[]>([]);
   const [categories, setCategories] = useState<TodoCategory[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, completedToday: 0, overdue: 0 });
   const [loading, setLoading] = useState(true);
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const getProjectsWithCounts = useCallback((projectList: Omit<TodoProject, "_count">[], todoList: Todo[]): TodoProject[] => {
-    return projectList.map((p) => ({
-      ...p,
-      _count: { todos: todoList.filter((t) => t.projectId === p.id).length },
-    }));
-  }, []);
 
   const getCategoriesWithCounts = useCallback((categoryList: Omit<TodoCategory, "_count">[], todoList: Todo[]): TodoCategory[] => {
     return categoryList.map((c) => ({
@@ -106,7 +92,7 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Save data to server (debounced)
-  const saveToServer = useCallback((projectList: TodoProject[], categoryList: TodoCategory[], todoList: Todo[]) => {
+  const saveToServer = useCallback((categoryList: TodoCategory[], todoList: Todo[]) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -114,7 +100,6 @@ export function TodoProvider({ children }: { children: ReactNode }) {
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         const dataToSave = {
-          projects: projectList.map(({ _count, ...rest }) => rest),
           categories: categoryList.map(({ _count, ...rest }) => rest),
           todos: todoList,
         };
@@ -141,65 +126,29 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await response.json();
-      const projectList = data.projects || [];
       const categoryList = data.categories || [];
-      const todoList = data.todos || [];
+      // Ensure todos have subtasks array (migration for old data)
+      const todoList = (data.todos || []).map((t: Todo) => ({
+        ...t,
+        subtasks: t.subtasks || [],
+      }));
 
-      setProjects(getProjectsWithCounts(projectList, todoList));
       setCategories(getCategoriesWithCounts(categoryList, todoList));
       setTodos(todoList);
       setStats(calculateStats(todoList));
     } catch (error) {
       console.error("Error loading data:", error);
-      // Initialize with empty data
-      setProjects([]);
       setCategories([]);
       setTodos([]);
       setStats({ total: 0, pending: 0, completedToday: 0, overdue: 0 });
     } finally {
       setLoading(false);
     }
-  }, [getProjectsWithCounts, getCategoriesWithCounts, calculateStats]);
+  }, [getCategoriesWithCounts, calculateStats]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Project CRUD
-  const addProject = async (name: string, description?: string, color?: string): Promise<TodoProject | null> => {
-    const newProject: TodoProject = {
-      id: generateId(),
-      name,
-      description: description || null,
-      color: color || "#8b5cf6",
-      _count: { todos: 0 },
-    };
-    const updated = [...projects, newProject];
-    setProjects(updated);
-    saveToServer(updated, categories, todos);
-    return newProject;
-  };
-
-  const updateProject = async (id: string, name: string, description?: string, color?: string): Promise<TodoProject | null> => {
-    const updated = projects.map((p) =>
-      p.id === id ? { ...p, name, description: description ?? p.description, color: color ?? p.color } : p
-    );
-    setProjects(updated);
-    saveToServer(updated, categories, todos);
-    return updated.find((p) => p.id === id) || null;
-  };
-
-  const deleteProject = async (id: string): Promise<boolean> => {
-    const updatedProjects = projects.filter((p) => p.id !== id);
-    const updatedTodos = todos.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
-
-    setProjects(updatedProjects);
-    setTodos(updatedTodos);
-    saveToServer(updatedProjects, categories, updatedTodos);
-
-    if (selectedProject === id) setSelectedProject(null);
-    return true;
-  };
 
   // Category CRUD
   const addCategory = async (name: string, color?: string): Promise<TodoCategory | null> => {
@@ -211,7 +160,7 @@ export function TodoProvider({ children }: { children: ReactNode }) {
     };
     const updated = [...categories, newCategory];
     setCategories(updated);
-    saveToServer(projects, updated, todos);
+    saveToServer(updated, todos);
     return newCategory;
   };
 
@@ -220,7 +169,7 @@ export function TodoProvider({ children }: { children: ReactNode }) {
       c.id === id ? { ...c, name, color: color ?? c.color } : c
     );
     setCategories(updated);
-    saveToServer(projects, updated, todos);
+    saveToServer(updated, todos);
     return updated.find((c) => c.id === id) || null;
   };
 
@@ -230,29 +179,28 @@ export function TodoProvider({ children }: { children: ReactNode }) {
 
     setCategories(updatedCategories);
     setTodos(updatedTodos);
-    saveToServer(projects, updatedCategories, updatedTodos);
+    saveToServer(updatedCategories, updatedTodos);
     return true;
   };
 
   // Todo CRUD
-  const addTodo = async (todo: Omit<Todo, "id" | "createdAt" | "updatedAt">): Promise<Todo | null> => {
+  const addTodo = async (todo: Omit<Todo, "id" | "createdAt" | "updatedAt" | "subtasks"> & { subtasks?: Subtask[] }): Promise<Todo | null> => {
     const now = new Date().toISOString();
     const newTodo: Todo = {
       ...todo,
       id: generateId(),
+      subtasks: todo.subtasks || [],
       createdAt: now,
       updatedAt: now,
     };
     const updatedTodos = [...todos, newTodo];
     setTodos(updatedTodos);
 
-    const updatedProjects = getProjectsWithCounts(projects, updatedTodos);
     const updatedCategories = getCategoriesWithCounts(categories, updatedTodos);
-    setProjects(updatedProjects);
     setCategories(updatedCategories);
     setStats(calculateStats(updatedTodos));
 
-    saveToServer(updatedProjects, updatedCategories, updatedTodos);
+    saveToServer(updatedCategories, updatedTodos);
     return newTodo;
   };
 
@@ -262,13 +210,11 @@ export function TodoProvider({ children }: { children: ReactNode }) {
     );
     setTodos(updatedTodos);
 
-    const updatedProjects = getProjectsWithCounts(projects, updatedTodos);
     const updatedCategories = getCategoriesWithCounts(categories, updatedTodos);
-    setProjects(updatedProjects);
     setCategories(updatedCategories);
     setStats(calculateStats(updatedTodos));
 
-    saveToServer(updatedProjects, updatedCategories, updatedTodos);
+    saveToServer(updatedCategories, updatedTodos);
     return updatedTodos.find((t) => t.id === id) || null;
   };
 
@@ -276,35 +222,71 @@ export function TodoProvider({ children }: { children: ReactNode }) {
     const updatedTodos = todos.filter((t) => t.id !== id);
     setTodos(updatedTodos);
 
-    const updatedProjects = getProjectsWithCounts(projects, updatedTodos);
     const updatedCategories = getCategoriesWithCounts(categories, updatedTodos);
-    setProjects(updatedProjects);
     setCategories(updatedCategories);
     setStats(calculateStats(updatedTodos));
 
-    saveToServer(updatedProjects, updatedCategories, updatedTodos);
+    saveToServer(updatedCategories, updatedTodos);
+    return true;
+  };
+
+  // Subtask CRUD
+  const addSubtask = async (todoId: string, text: string): Promise<boolean> => {
+    const newSubtask: Subtask = {
+      id: generateId(),
+      text,
+      completed: false,
+    };
+    const updatedTodos = todos.map((t) =>
+      t.id === todoId ? { ...t, subtasks: [...t.subtasks, newSubtask], updatedAt: new Date().toISOString() } : t
+    );
+    setTodos(updatedTodos);
+    saveToServer(categories, updatedTodos);
+    return true;
+  };
+
+  const updateSubtask = async (todoId: string, subtaskId: string, updates: Partial<Subtask>): Promise<boolean> => {
+    const updatedTodos = todos.map((t) =>
+      t.id === todoId
+        ? {
+            ...t,
+            subtasks: t.subtasks.map((s) => (s.id === subtaskId ? { ...s, ...updates } : s)),
+            updatedAt: new Date().toISOString(),
+          }
+        : t
+    );
+    setTodos(updatedTodos);
+    saveToServer(categories, updatedTodos);
+    return true;
+  };
+
+  const deleteSubtask = async (todoId: string, subtaskId: string): Promise<boolean> => {
+    const updatedTodos = todos.map((t) =>
+      t.id === todoId
+        ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subtaskId), updatedAt: new Date().toISOString() }
+        : t
+    );
+    setTodos(updatedTodos);
+    saveToServer(categories, updatedTodos);
     return true;
   };
 
   return (
     <TodoContext.Provider
       value={{
-        projects,
         categories,
         todos,
-        selectedProject,
-        setSelectedProject,
         stats,
         loading,
-        addProject,
-        updateProject,
-        deleteProject,
         addCategory,
         updateCategory,
         deleteCategory,
         addTodo,
         updateTodo,
         deleteTodo,
+        addSubtask,
+        updateSubtask,
+        deleteSubtask,
         refreshData: loadData,
       }}
     >

@@ -4,41 +4,37 @@ import { useState, useMemo } from "react";
 import { useTodoContext } from "./TodoContext";
 
 export default function TodosPage() {
-  const { projects, categories, todos, selectedProject, addTodo, updateTodo, deleteTodo } = useTodoContext();
+  const { categories, todos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask } = useTodoContext();
   const [showModal, setShowModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<typeof todos[0] | null>(null);
   const [draggedTodo, setDraggedTodo] = useState<string | null>(null);
+  const [newSubtaskText, setNewSubtaskText] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     priority: "medium",
     dueDate: "",
-    projectId: "",
     categoryId: "",
   });
 
   // Group todos by status for Kanban columns
   const columns = useMemo(() => {
-    const projectTodos = selectedProject
-      ? todos.filter(t => t.projectId === selectedProject)
-      : todos;
-
     return {
-      todo: projectTodos.filter(t => !t.completed && t.priority !== "high"),
-      inProgress: projectTodos.filter(t => !t.completed && t.priority === "high"),
-      done: projectTodos.filter(t => t.completed),
+      todo: todos.filter(t => !t.completed && t.priority !== "high"),
+      inProgress: todos.filter(t => !t.completed && t.priority === "high"),
+      done: todos.filter(t => t.completed),
     };
-  }, [todos, selectedProject]);
+  }, [todos]);
 
   const openAddModal = (status?: string) => {
     setEditingTodo(null);
+    setNewSubtaskText("");
     setFormData({
       title: "",
       description: "",
       priority: status === "inProgress" ? "high" : "medium",
       dueDate: "",
-      projectId: selectedProject || "",
       categoryId: "",
     });
     setShowModal(true);
@@ -46,12 +42,12 @@ export default function TodosPage() {
 
   const openEditModal = (todo: typeof todos[0]) => {
     setEditingTodo(todo);
+    setNewSubtaskText("");
     setFormData({
       title: todo.title,
       description: todo.description || "",
       priority: todo.priority,
       dueDate: todo.dueDate ? todo.dueDate.split("T")[0] : "",
-      projectId: todo.projectId || "",
       categoryId: todo.categoryId || "",
     });
     setShowModal(true);
@@ -65,7 +61,6 @@ export default function TodosPage() {
         description: formData.description || null,
         priority: formData.priority,
         dueDate: formData.dueDate || null,
-        projectId: formData.projectId || null,
         categoryId: formData.categoryId || null,
       });
     } else {
@@ -75,7 +70,6 @@ export default function TodosPage() {
         completed: false,
         priority: formData.priority,
         dueDate: formData.dueDate || null,
-        projectId: formData.projectId || null,
         categoryId: formData.categoryId || null,
       });
     }
@@ -113,6 +107,22 @@ export default function TodosPage() {
     await deleteTodo(id);
   };
 
+  const handleAddSubtask = async (todoId: string) => {
+    if (!newSubtaskText.trim()) return;
+    await addSubtask(todoId, newSubtaskText.trim());
+    setNewSubtaskText("");
+  };
+
+  const handleToggleSubtask = async (e: React.MouseEvent, todoId: string, subtaskId: string, currentCompleted: boolean) => {
+    e.stopPropagation();
+    await updateSubtask(todoId, subtaskId, { completed: !currentCompleted });
+  };
+
+  const handleDeleteSubtask = async (e: React.MouseEvent, todoId: string, subtaskId: string) => {
+    e.stopPropagation();
+    await deleteSubtask(todoId, subtaskId);
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "#ef4444";
@@ -133,14 +143,66 @@ export default function TodosPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const getSubtaskProgress = (todo: typeof todos[0]) => {
+    if (!todo.subtasks || todo.subtasks.length === 0) return null;
+    const completed = todo.subtasks.filter(s => s.completed).length;
+    return { completed, total: todo.subtasks.length };
+  };
+
+  const renderNote = (todo: typeof todos[0], className?: string) => {
+    const progress = getSubtaskProgress(todo);
+
+    return (
+      <div
+        key={todo.id}
+        className={`sticky-note ${className || ""}`}
+        draggable
+        onDragStart={() => handleDragStart(todo.id)}
+        onClick={() => openEditModal(todo)}
+        style={{ borderLeftColor: getPriorityColor(todo.priority) }}
+      >
+        <div className="note-content">
+          <p className="note-title">{todo.title}</p>
+          {todo.description && (
+            <p className="note-desc">{todo.description}</p>
+          )}
+          {/* Subtasks preview on card */}
+          {progress && (
+            <div className="subtasks-preview" onClick={(e) => e.stopPropagation()}>
+              <div className="subtasks-progress-bar">
+                <div
+                  className="subtasks-progress-fill"
+                  style={{ width: `${(progress.completed / progress.total) * 100}%` }}
+                />
+              </div>
+              <span className="subtasks-count">{progress.completed}/{progress.total}</span>
+            </div>
+          )}
+        </div>
+        <div className="note-footer">
+          {todo.categoryId && (
+            <span
+              className="note-tag"
+              style={{ backgroundColor: getCategoryColor(todo.categoryId) + "30", color: getCategoryColor(todo.categoryId) || undefined }}
+            >
+              {categories.find(c => c.id === todo.categoryId)?.name}
+            </span>
+          )}
+          {todo.dueDate && (
+            <span className="note-date">{formatDate(todo.dueDate)}</span>
+          )}
+        </div>
+        <button className="note-delete" onClick={(e) => { e.stopPropagation(); handleDelete(todo.id); }}>
+          &times;
+        </button>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="board-header">
-        <h2 className="board-title">
-          {selectedProject
-            ? projects.find(p => p.id === selectedProject)?.name || "Board"
-            : "All Tasks"}
-        </h2>
+        <h2 className="board-title">All Tasks</h2>
       </div>
 
       <div className="kanban-board">
@@ -156,39 +218,7 @@ export default function TodosPage() {
             <span className="column-count">{columns.todo.length}</span>
           </div>
           <div className="column-content">
-            {columns.todo.map((todo) => (
-              <div
-                key={todo.id}
-                className="sticky-note"
-                draggable
-                onDragStart={() => handleDragStart(todo.id)}
-                onClick={() => openEditModal(todo)}
-                style={{ borderLeftColor: getPriorityColor(todo.priority) }}
-              >
-                <div className="note-content">
-                  <p className="note-title">{todo.title}</p>
-                  {todo.description && (
-                    <p className="note-desc">{todo.description}</p>
-                  )}
-                </div>
-                <div className="note-footer">
-                  {todo.categoryId && (
-                    <span
-                      className="note-tag"
-                      style={{ backgroundColor: getCategoryColor(todo.categoryId) + "30", color: getCategoryColor(todo.categoryId) || undefined }}
-                    >
-                      {categories.find(c => c.id === todo.categoryId)?.name}
-                    </span>
-                  )}
-                  {todo.dueDate && (
-                    <span className="note-date">{formatDate(todo.dueDate)}</span>
-                  )}
-                </div>
-                <button className="note-delete" onClick={(e) => { e.stopPropagation(); handleDelete(todo.id); }}>
-                  &times;
-                </button>
-              </div>
-            ))}
+            {columns.todo.map((todo) => renderNote(todo))}
             <button className="add-note-btn" onClick={() => openAddModal("todo")}>
               + Add note
             </button>
@@ -207,39 +237,7 @@ export default function TodosPage() {
             <span className="column-count">{columns.inProgress.length}</span>
           </div>
           <div className="column-content">
-            {columns.inProgress.map((todo) => (
-              <div
-                key={todo.id}
-                className="sticky-note urgent"
-                draggable
-                onDragStart={() => handleDragStart(todo.id)}
-                onClick={() => openEditModal(todo)}
-                style={{ borderLeftColor: getPriorityColor(todo.priority) }}
-              >
-                <div className="note-content">
-                  <p className="note-title">{todo.title}</p>
-                  {todo.description && (
-                    <p className="note-desc">{todo.description}</p>
-                  )}
-                </div>
-                <div className="note-footer">
-                  {todo.categoryId && (
-                    <span
-                      className="note-tag"
-                      style={{ backgroundColor: getCategoryColor(todo.categoryId) + "30", color: getCategoryColor(todo.categoryId) || undefined }}
-                    >
-                      {categories.find(c => c.id === todo.categoryId)?.name}
-                    </span>
-                  )}
-                  {todo.dueDate && (
-                    <span className="note-date">{formatDate(todo.dueDate)}</span>
-                  )}
-                </div>
-                <button className="note-delete" onClick={(e) => { e.stopPropagation(); handleDelete(todo.id); }}>
-                  &times;
-                </button>
-              </div>
-            ))}
+            {columns.inProgress.map((todo) => renderNote(todo, "urgent"))}
             <button className="add-note-btn" onClick={() => openAddModal("inProgress")}>
               + Add note
             </button>
@@ -258,40 +256,12 @@ export default function TodosPage() {
             <span className="column-count">{columns.done.length}</span>
           </div>
           <div className="column-content">
-            {columns.done.map((todo) => (
-              <div
-                key={todo.id}
-                className="sticky-note completed"
-                draggable
-                onDragStart={() => handleDragStart(todo.id)}
-                onClick={() => openEditModal(todo)}
-              >
-                <div className="note-content">
-                  <p className="note-title">{todo.title}</p>
-                  {todo.description && (
-                    <p className="note-desc">{todo.description}</p>
-                  )}
-                </div>
-                <div className="note-footer">
-                  {todo.categoryId && (
-                    <span
-                      className="note-tag"
-                      style={{ backgroundColor: getCategoryColor(todo.categoryId) + "30", color: getCategoryColor(todo.categoryId) || undefined }}
-                    >
-                      {categories.find(c => c.id === todo.categoryId)?.name}
-                    </span>
-                  )}
-                </div>
-                <button className="note-delete" onClick={(e) => { e.stopPropagation(); handleDelete(todo.id); }}>
-                  &times;
-                </button>
-              </div>
-            ))}
+            {columns.done.map((todo) => renderNote(todo, "completed"))}
           </div>
         </div>
       </div>
 
-      {/* Quick Add Modal */}
+      {/* Edit/Add Modal */}
       {showModal && (
         <div className="modal-backdrop open" onClick={() => setShowModal(false)}>
           <div className="modal-box note-modal" onClick={(e) => e.stopPropagation()}>
@@ -332,6 +302,58 @@ export default function TodosPage() {
                     <option value="high">High</option>
                   </select>
                 </div>
+
+                {/* Subtasks Section */}
+                {editingTodo && (
+                  <div className="subtasks-section">
+                    <h4 className="subtasks-title">Checklist</h4>
+                    <div className="subtasks-list">
+                      {editingTodo.subtasks.map((subtask) => (
+                        <div key={subtask.id} className="subtask-item">
+                          <label className="subtask-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={subtask.completed}
+                              onChange={(e) => handleToggleSubtask(e as unknown as React.MouseEvent, editingTodo.id, subtask.id, subtask.completed)}
+                            />
+                            <span className={`subtask-text ${subtask.completed ? "completed" : ""}`}>
+                              {subtask.text}
+                            </span>
+                          </label>
+                          <button
+                            type="button"
+                            className="subtask-delete"
+                            onClick={(e) => handleDeleteSubtask(e, editingTodo.id, subtask.id)}
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="subtask-add">
+                      <input
+                        type="text"
+                        value={newSubtaskText}
+                        onChange={(e) => setNewSubtaskText(e.target.value)}
+                        placeholder="Add a subtask..."
+                        className="subtask-input"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddSubtask(editingTodo.id);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="subtask-add-btn"
+                        onClick={() => handleAddSubtask(editingTodo.id)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-foot">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>
@@ -455,6 +477,29 @@ export default function TodosPage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+        .subtasks-preview {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .subtasks-progress-bar {
+          flex: 1;
+          height: 4px;
+          background: rgba(0,0,0,0.1);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .subtasks-progress-fill {
+          height: 100%;
+          background: #10b981;
+          transition: width 0.3s ease;
+        }
+        .subtasks-count {
+          font-size: 0.7rem;
+          color: #6b7280;
+          font-weight: 500;
+        }
         .note-footer {
           display: flex;
           align-items: center;
@@ -505,7 +550,7 @@ export default function TodosPage() {
           background: var(--accent)10;
         }
         .note-modal {
-          max-width: 400px;
+          max-width: 450px;
         }
         .note-input {
           width: 100%;
@@ -562,6 +607,101 @@ export default function TodosPage() {
         .note-select option:hover {
           background: #8b5cf6;
           color: white;
+        }
+        /* Subtasks Styles */
+        .subtasks-section {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid var(--border);
+        }
+        .subtasks-title {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text);
+          margin: 0 0 12px 0;
+        }
+        .subtasks-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 200px;
+          overflow-y: auto;
+        }
+        .subtask-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px;
+          background: var(--bg);
+          border-radius: 6px;
+          border: 1px solid var(--border);
+        }
+        .subtask-checkbox {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 1;
+          cursor: pointer;
+        }
+        .subtask-checkbox input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+          accent-color: #ec4899;
+        }
+        .subtask-text {
+          font-size: 0.85rem;
+          color: var(--text);
+        }
+        .subtask-text.completed {
+          text-decoration: line-through;
+          color: var(--text-muted);
+        }
+        .subtask-delete {
+          background: none;
+          border: none;
+          color: var(--text-muted);
+          cursor: pointer;
+          font-size: 1rem;
+          padding: 0 4px;
+          opacity: 0.5;
+          transition: opacity 0.2s, color 0.2s;
+        }
+        .subtask-delete:hover {
+          opacity: 1;
+          color: #ef4444;
+        }
+        .subtask-add {
+          display: flex;
+          gap: 8px;
+          margin-top: 10px;
+        }
+        .subtask-input {
+          flex: 1;
+          padding: 8px 12px;
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          background: var(--bg);
+          color: var(--text);
+          font-size: 0.85rem;
+        }
+        .subtask-input:focus {
+          outline: none;
+          border-color: var(--accent);
+        }
+        .subtask-add-btn {
+          padding: 8px 14px;
+          background: var(--accent);
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: opacity 0.2s;
+        }
+        .subtask-add-btn:hover {
+          opacity: 0.9;
         }
       `}</style>
     </>
