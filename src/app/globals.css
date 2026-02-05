@@ -2144,6 +2144,9 @@ tbody tr:hover {
   padding: 0;
   width: 100%;
   max-width: 460px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.05),
     0 40px 80px -20px rgba(0, 0, 0, 0.8),
@@ -2151,6 +2154,13 @@ tbody tr:hover {
   animation: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   position: relative;
+}
+
+.modal-box form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 .modal-box::before {
@@ -2176,6 +2186,7 @@ tbody tr:hover {
   padding: 24px 28px;
   background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .modal-head h2 {
@@ -2218,6 +2229,8 @@ tbody tr:hover {
 
 .modal-body {
   padding: 28px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .field {
@@ -3344,6 +3357,7 @@ button.project-dropdown-btn svg {
   padding: 20px 28px;
   background: var(--bg-surface);
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .modal-foot .btn {
