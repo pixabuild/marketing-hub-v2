@@ -46,6 +46,7 @@ export default function UsersPage() {
     role: "user",
     affiliateHQ: false,
     financialTracker: false,
+    todoDashboard: false,
     projectIds: [] as string[],
   });
 
@@ -96,6 +97,7 @@ export default function UsersPage() {
       role: "user",
       affiliateHQ: false,
       financialTracker: false,
+      todoDashboard: false,
       projectIds: [],
     });
     setShowModal(true);
@@ -109,6 +111,9 @@ export default function UsersPage() {
     const hasFinancialTracker = user.appPermissions.some(
       (p) => p.appName === "financial_tracker" && p.canAccess
     );
+    const hasTodoDashboard = user.appPermissions.some(
+      (p) => p.appName === "todo_dashboard" && p.canAccess
+    );
     setFormData({
       email: user.email,
       name: user.name,
@@ -116,6 +121,7 @@ export default function UsersPage() {
       role: user.role,
       affiliateHQ: hasAffiliateHQ,
       financialTracker: hasFinancialTracker,
+      todoDashboard: hasTodoDashboard,
       projectIds: user.projectPermissions.map((p) => p.project.id),
     });
     setShowModal(true);
@@ -127,6 +133,7 @@ export default function UsersPage() {
     const appPermissions = {
       affiliate_hq: formData.affiliateHQ,
       financial_tracker: formData.financialTracker,
+      todo_dashboard: formData.todoDashboard,
     };
 
     try {
@@ -270,6 +277,9 @@ export default function UsersPage() {
                       {user.appPermissions.some(p => p.appName === "financial_tracker" && p.canAccess) && (
                         <span className="app-badge vault">Vault</span>
                       )}
+                      {user.appPermissions.some(p => p.appName === "todo_dashboard" && p.canAccess) && (
+                        <span className="app-badge taskhub">TaskHub</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -363,6 +373,14 @@ export default function UsersPage() {
                         onChange={(e) => setFormData({ ...formData, financialTracker: e.target.checked })}
                       />
                       <span>Vault - Financial Tracker</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.todoDashboard}
+                        onChange={(e) => setFormData({ ...formData, todoDashboard: e.target.checked })}
+                      />
+                      <span>TaskHub - Todo Dashboard</span>
                     </label>
                   </div>
                 </div>
