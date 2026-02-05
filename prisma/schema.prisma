@@ -21,6 +21,9 @@ model User {
   projects           Project[]
   appPermissions     UserAppPermission[]
   projectPermissions UserProjectPermission[]
+  todoProjects       TodoProject[]
+  todoCategories     TodoCategory[]
+  todos              Todo[]
 
   @@map("users")
 }
@@ -206,4 +209,55 @@ model Budget {
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@map("budgets")
+}
+
+// ============ TODO DASHBOARD ============
+
+model TodoProject {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#8b5cf6")
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos Todo[]
+
+  @@map("todo_projects")
+}
+
+model TodoCategory {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6c757d")
+  userId    String
+  createdAt DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos Todo[]
+
+  @@unique([userId, name])
+  @@map("todo_categories")
+}
+
+model Todo {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  priority    String    @default("medium") // low, medium, high
+  dueDate     DateTime? @db.Date
+  projectId   String?
+  categoryId  String?
+  userId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  TodoProject?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  category TodoCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("todos")
 }
