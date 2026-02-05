@@ -3722,22 +3722,52 @@ button.project-dropdown-btn svg {
 .card-subtask-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #374151;
+  padding: 3px 0;
 }
 
 .card-subtask-item input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 5px;
   cursor: pointer;
-  accent-color: #10b981;
   flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s ease;
+  background: rgba(255,255,255,0.9);
+}
+
+.card-subtask-item input[type="checkbox"]:hover {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.card-subtask-item input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: #10b981;
+}
+
+.card-subtask-item input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
 }
 
 .card-subtask-item span {
-  line-height: 1.3;
+  line-height: 1.4;
+  transition: all 0.2s ease;
 }
 
 .card-subtask-item span.completed {
@@ -3923,21 +3953,51 @@ button.project-dropdown-btn svg {
 .subtask-checkbox {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
   cursor: pointer;
 }
 
 .subtask-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
   cursor: pointer;
-  accent-color: #ec4899;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s ease;
+  background: var(--bg-elevated);
+}
+
+.subtask-checkbox input[type="checkbox"]:hover {
+  border-color: #ec4899;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+}
+
+.subtask-checkbox input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  border-color: #ec4899;
+}
+
+.subtask-checkbox input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
 }
 
 .subtask-text {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-primary);
+  transition: all 0.2s ease;
 }
 
 .subtask-text.completed {
