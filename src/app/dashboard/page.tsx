@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   // Fetch or create user in database
   let userRole = "user";
-  let appPermissions = { affiliate_hq: false, financial_tracker: false };
+  let appPermissions = { affiliate_hq: false, financial_tracker: false, todo_dashboard: false };
   try {
     let dbUser = await prisma.user.findUnique({
       where: { email: user.email! },
@@ -44,6 +44,7 @@ export default async function DashboardPage() {
         data: [
           { userId: dbUser.id, appName: "affiliate_hq", canAccess: true },
           { userId: dbUser.id, appName: "financial_tracker", canAccess: true },
+          { userId: dbUser.id, appName: "todo_dashboard", canAccess: true },
         ],
       });
 
@@ -58,11 +59,12 @@ export default async function DashboardPage() {
 
     // Admins have access to everything
     if (userRole === "admin") {
-      appPermissions = { affiliate_hq: true, financial_tracker: true };
+      appPermissions = { affiliate_hq: true, financial_tracker: true, todo_dashboard: true };
     } else if (dbUser?.appPermissions) {
       appPermissions = {
         affiliate_hq: dbUser.appPermissions.some(p => p.appName === "affiliate_hq" && p.canAccess),
         financial_tracker: dbUser.appPermissions.some(p => p.appName === "financial_tracker" && p.canAccess),
+        todo_dashboard: dbUser.appPermissions.some(p => p.appName === "todo_dashboard" && p.canAccess),
       };
     }
   } catch (error) {

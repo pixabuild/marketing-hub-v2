@@ -1496,6 +1496,7 @@ tbody tr:hover {
 
 .app-card.finance::before { background: #a855f7; }
 .app-card.affiliate::before { background: #3b82f6; }
+.app-card.todo::before { background: #ec4899; }
 .app-card.coming-soon::before { background: #6366f1; }
 
 .app-card .shine {
@@ -1542,6 +1543,12 @@ tbody tr:hover {
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   color: white;
   box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.4);
+}
+
+.app-card.todo .app-icon {
+  background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+  color: white;
+  box-shadow: 0 8px 24px -4px rgba(236, 72, 153, 0.4);
 }
 
 .app-card.coming-soon .app-icon {

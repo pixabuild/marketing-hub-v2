@@ -12,6 +12,7 @@ interface DashboardClientProps {
   appPermissions: {
     affiliate_hq: boolean;
     financial_tracker: boolean;
+    todo_dashboard: boolean;
   };
 }
 
@@ -31,6 +32,8 @@ export default function DashboardClient({ user, appPermissions }: DashboardClien
       router.push("/financial-tracker");
     } else if (app === "affiliate") {
       router.push("/affiliate-hq");
+    } else if (app === "todo") {
+      router.push("/todo-dashboard");
     } else if (app === "users") {
       router.push("/dashboard/users");
     }
@@ -84,6 +87,21 @@ export default function DashboardClient({ user, appPermissions }: DashboardClien
           <div className={`app-status ${appPermissions.affiliate_hq ? "active" : "no-access"}`}>
             <span className="status-dot"></span>
             {appPermissions.affiliate_hq ? "Active" : "No Access"}
+          </div>
+        </div>
+
+        <div
+          className={`app-card todo ${!appPermissions.todo_dashboard ? "disabled" : ""}`}
+          onClick={() => appPermissions.todo_dashboard && openApp("todo")}
+          style={!appPermissions.todo_dashboard ? { cursor: "not-allowed", opacity: 0.5 } : {}}
+        >
+          <div className="shine"></div>
+          <div className="app-icon">T</div>
+          <h2>TaskHub - Todo Dashboard</h2>
+          <p>Organize your tasks with projects, categories, priorities, and due dates. Stay productive.</p>
+          <div className={`app-status ${appPermissions.todo_dashboard ? "active" : "no-access"}`}>
+            <span className="status-dot"></span>
+            {appPermissions.todo_dashboard ? "Active" : "No Access"}
           </div>
         </div>
 
