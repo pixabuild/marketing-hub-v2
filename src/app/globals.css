@@ -3722,46 +3722,45 @@ button.project-dropdown-btn svg {
 .card-subtask-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #374151;
-  padding: 3px 0;
+  padding: 2px 0;
 }
 
 .card-subtask-item input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #d1d5db;
-  border-radius: 5px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 3px;
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   background: rgba(255,255,255,0.9);
 }
 
 .card-subtask-item input[type="checkbox"]:hover {
   border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .card-subtask-item input[type="checkbox"]:checked {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #10b981;
   border-color: #10b981;
 }
 
 .card-subtask-item input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 9px;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
   border: solid white;
-  border-width: 0 2.5px 2.5px 0;
+  border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
