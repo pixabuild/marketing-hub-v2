@@ -8,6 +8,13 @@ interface Subtask {
   completed: boolean;
 }
 
+interface PinnedNote {
+  id: string;
+  text: string;
+  color: string;
+  createdAt: string;
+}
+
 interface TodoCategory {
   id: string;
   name: string;
@@ -38,6 +45,7 @@ interface Stats {
 interface TodoContextType {
   categories: TodoCategory[];
   todos: Todo[];
+  pinnedNotes: PinnedNote[];
   stats: Stats;
   loading: boolean;
   addCategory: (name: string, color?: string) => Promise<TodoCategory | null>;
@@ -49,6 +57,9 @@ interface TodoContextType {
   addSubtask: (todoId: string, text: string) => Promise<boolean>;
   updateSubtask: (todoId: string, subtaskId: string, updates: Partial<Subtask>) => Promise<boolean>;
   deleteSubtask: (todoId: string, subtaskId: string) => Promise<boolean>;
+  addPinnedNote: (text: string, color?: string) => Promise<PinnedNote | null>;
+  updatePinnedNote: (id: string, text: string, color?: string) => Promise<PinnedNote | null>;
+  deletePinnedNote: (id: string) => Promise<boolean>;
   refreshData: () => void;
 }
 
@@ -59,6 +70,7 @@ const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9
 export function TodoProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<TodoCategory[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, completedToday: 0, overdue: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -92,17 +104,20 @@ export function TodoProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Save data to server (debounced)
-  const saveToServer = useCallback((categoryList: TodoCategory[], todoList: Todo[]) => {
+  const saveToServer = useCallback((categoryList: TodoCategory[], todoList: Todo[], notesList?: PinnedNote[]) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        const dataToSave = {
+        const dataToSave: Record<string, unknown> = {
           categories: categoryList.map(({ _count, ...rest }) => rest),
           todos: todoList,
         };
+        if (notesList !== undefined) {
+          dataToSave.pinnedNotes = notesList;
+        }
 
         await fetch("/api/todo-data", {
           method: "POST",
@@ -132,14 +147,17 @@ export function TodoProvider({ children }: { children: ReactNode }) {
         ...t,
         subtasks: t.subtasks || [],
       }));
+      const notesList = data.pinnedNotes || [];
 
       setCategories(getCategoriesWithCounts(categoryList, todoList));
       setTodos(todoList);
+      setPinnedNotes(notesList);
       setStats(calculateStats(todoList));
     } catch (error) {
       console.error("Error loading data:", error);
       setCategories([]);
       setTodos([]);
+      setPinnedNotes([]);
       setStats({ total: 0, pending: 0, completedToday: 0, overdue: 0 });
     } finally {
       setLoading(false);
@@ -271,11 +289,42 @@ export function TodoProvider({ children }: { children: ReactNode }) {
     return true;
   };
 
+  // Pinned Notes CRUD
+  const addPinnedNote = async (text: string, color?: string): Promise<PinnedNote | null> => {
+    const newNote: PinnedNote = {
+      id: generateId(),
+      text,
+      color: color || "#fef3c7",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...pinnedNotes, newNote];
+    setPinnedNotes(updated);
+    saveToServer(categories, todos, updated);
+    return newNote;
+  };
+
+  const updatePinnedNote = async (id: string, text: string, color?: string): Promise<PinnedNote | null> => {
+    const updated = pinnedNotes.map((n) =>
+      n.id === id ? { ...n, text, color: color ?? n.color } : n
+    );
+    setPinnedNotes(updated);
+    saveToServer(categories, todos, updated);
+    return updated.find((n) => n.id === id) || null;
+  };
+
+  const deletePinnedNote = async (id: string): Promise<boolean> => {
+    const updated = pinnedNotes.filter((n) => n.id !== id);
+    setPinnedNotes(updated);
+    saveToServer(categories, todos, updated);
+    return true;
+  };
+
   return (
     <TodoContext.Provider
       value={{
         categories,
         todos,
+        pinnedNotes,
         stats,
         loading,
         addCategory,
@@ -287,6 +336,9 @@ export function TodoProvider({ children }: { children: ReactNode }) {
         addSubtask,
         updateSubtask,
         deleteSubtask,
+        addPinnedNote,
+        updatePinnedNote,
+        deletePinnedNote,
         refreshData: loadData,
       }}
     >
