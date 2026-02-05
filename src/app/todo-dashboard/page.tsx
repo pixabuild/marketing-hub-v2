@@ -6,9 +6,15 @@ import { useTodoContext } from "./TodoContext";
 export default function TodosPage() {
   const { categories, todos, addTodo, updateTodo, deleteTodo, addSubtask, updateSubtask, deleteSubtask } = useTodoContext();
   const [showModal, setShowModal] = useState(false);
-  const [editingTodo, setEditingTodo] = useState<typeof todos[0] | null>(null);
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [draggedTodo, setDraggedTodo] = useState<string | null>(null);
   const [newSubtaskText, setNewSubtaskText] = useState("");
+
+  // Get the current editing todo from todos array (stays in sync)
+  const editingTodo = useMemo(() => {
+    if (!editingTodoId) return null;
+    return todos.find(t => t.id === editingTodoId) || null;
+  }, [editingTodoId, todos]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -28,7 +34,7 @@ export default function TodosPage() {
   }, [todos]);
 
   const openAddModal = (status?: string) => {
-    setEditingTodo(null);
+    setEditingTodoId(null);
     setNewSubtaskText("");
     setFormData({
       title: "",
@@ -41,7 +47,7 @@ export default function TodosPage() {
   };
 
   const openEditModal = (todo: typeof todos[0]) => {
-    setEditingTodo(todo);
+    setEditingTodoId(todo.id);
     setNewSubtaskText("");
     setFormData({
       title: todo.title,
@@ -74,7 +80,7 @@ export default function TodosPage() {
       });
     }
     setShowModal(false);
-    setEditingTodo(null);
+    setEditingTodoId(null);
   };
 
   const handleDragStart = (todoId: string) => {
@@ -113,8 +119,7 @@ export default function TodosPage() {
     setNewSubtaskText("");
   };
 
-  const handleToggleSubtask = async (e: React.MouseEvent, todoId: string, subtaskId: string, currentCompleted: boolean) => {
-    e.stopPropagation();
+  const handleToggleSubtask = async (todoId: string, subtaskId: string, currentCompleted: boolean) => {
     await updateSubtask(todoId, subtaskId, { completed: !currentCompleted });
   };
 
@@ -150,8 +155,6 @@ export default function TodosPage() {
   };
 
   const renderNote = (todo: typeof todos[0], className?: string) => {
-    const progress = getSubtaskProgress(todo);
-
     return (
       <div
         key={todo.id}
@@ -166,16 +169,19 @@ export default function TodosPage() {
           {todo.description && (
             <p className="note-desc">{todo.description}</p>
           )}
-          {/* Subtasks preview on card */}
-          {progress && (
-            <div className="subtasks-preview" onClick={(e) => e.stopPropagation()}>
-              <div className="subtasks-progress-bar">
-                <div
-                  className="subtasks-progress-fill"
-                  style={{ width: `${(progress.completed / progress.total) * 100}%` }}
-                />
-              </div>
-              <span className="subtasks-count">{progress.completed}/{progress.total}</span>
+          {/* Subtasks displayed directly on card */}
+          {todo.subtasks && todo.subtasks.length > 0 && (
+            <div className="card-subtasks" onClick={(e) => e.stopPropagation()}>
+              {todo.subtasks.map((subtask) => (
+                <label key={subtask.id} className="card-subtask-item">
+                  <input
+                    type="checkbox"
+                    checked={subtask.completed}
+                    onChange={() => handleToggleSubtask(todo.id, subtask.id, subtask.completed)}
+                  />
+                  <span className={subtask.completed ? "completed" : ""}>{subtask.text}</span>
+                </label>
+              ))}
             </div>
           )}
         </div>
@@ -314,7 +320,7 @@ export default function TodosPage() {
                             <input
                               type="checkbox"
                               checked={subtask.completed}
-                              onChange={(e) => handleToggleSubtask(e as unknown as React.MouseEvent, editingTodo.id, subtask.id, subtask.completed)}
+                              onChange={() => handleToggleSubtask(editingTodo.id, subtask.id, subtask.completed)}
                             />
                             <span className={`subtask-text ${subtask.completed ? "completed" : ""}`}>
                               {subtask.text}
