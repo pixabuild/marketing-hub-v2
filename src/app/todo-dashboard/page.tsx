@@ -554,9 +554,14 @@ export default function TodosPage() {
           border-color: var(--accent);
         }
         .note-select option {
-          background: var(--card-bg);
-          color: var(--text);
+          background: #1a1a2e;
+          color: #e0e0e0;
           padding: 8px;
+        }
+        .note-select option:checked,
+        .note-select option:hover {
+          background: #8b5cf6;
+          color: white;
         }
       `}</style>
     </>
