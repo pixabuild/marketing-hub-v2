@@ -9,8 +9,8 @@ interface Project {
   description: string;
   cost: number | null;
   status: "paid" | "unpaid" | "partial";
+  date: string;
   month: string;
-  teamName: string;
   createdAt: string;
 }
 
@@ -23,84 +23,166 @@ interface Stats {
 
 interface ProjectTrackerContextType {
   projects: Project[];
-  teams: string[];
   stats: Stats;
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   loading: boolean;
+  isAdmin: boolean;
   addProject: (project: Omit<Project, "id" | "createdAt">) => Promise<Project | null>;
   updateProject: (id: string, updates: Partial<Project>) => Promise<Project | null>;
   deleteProject: (id: string) => Promise<boolean>;
-  addTeam: (name: string) => void;
   refreshData: () => void;
 }
 
 const ProjectTrackerContext = createContext<ProjectTrackerContextType | undefined>(undefined);
 
-const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
 export function ProjectTrackerProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [teams, setTeams] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [stats, setStats] = useState<Stats>({ totalProjects: 0, totalPaid: 0, totalUnpaid: 0, totalRevenue: 0 });
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const servicesCategoryIdRef = useRef<string | null>(null);
 
   const calculateStats = useCallback((projectList: Project[], month: string): Stats => {
     const monthProjects = projectList.filter(p => p.month === month);
     return {
       totalProjects: monthProjects.length,
-      totalPaid: monthProjects.filter(p => p.status === "paid").length,
-      totalUnpaid: monthProjects.filter(p => p.status !== "paid").length,
-      totalRevenue: monthProjects
+      totalPaid: monthProjects
         .filter(p => p.status === "paid")
+        .reduce((sum, p) => sum + (p.cost || 0), 0),
+      totalUnpaid: monthProjects
+        .filter(p => p.status !== "paid")
+        .reduce((sum, p) => sum + (p.cost || 0), 0),
+      totalRevenue: monthProjects
         .reduce((sum, p) => sum + (p.cost || 0), 0),
     };
   }, []);
 
-  const saveToServer = useCallback((projectList: Project[], teamList: string[]) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+  // --- Financial Tracker Sync ---
 
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        await fetch("/api/project-tracker-data", {
+  const ensureServicesCategory = useCallback(async (): Promise<string | null> => {
+    if (servicesCategoryIdRef.current) return servicesCategoryIdRef.current;
+
+    try {
+      const res = await fetch("/api/categories");
+      if (!res.ok) return null;
+      const categories = await res.json();
+
+      const existing = categories.find(
+        (c: { name: string; type: string }) => c.name === "Services" && c.type === "income"
+      );
+      if (existing) {
+        servicesCategoryIdRef.current = existing.id;
+        return existing.id;
+      }
+
+      const createRes = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Services", type: "income", color: "#f97316" }),
+      });
+      if (!createRes.ok) {
+        const retryRes = await fetch("/api/categories");
+        const retryCategories = await retryRes.json();
+        const found = retryCategories.find(
+          (c: { name: string; type: string }) => c.name === "Services" && c.type === "income"
+        );
+        if (found) { servicesCategoryIdRef.current = found.id; return found.id; }
+        return null;
+      }
+      const newCategory = await createRes.json();
+      servicesCategoryIdRef.current = newCategory.id;
+      return newCategory.id;
+    } catch (error) {
+      console.error("Error ensuring Services category:", error);
+      return null;
+    }
+  }, []);
+
+  const syncProjectToTransaction = useCallback(async (project: Project) => {
+    if (!project.cost || project.cost <= 0) return;
+
+    const categoryId = await ensureServicesCategory();
+
+    try {
+      const searchRes = await fetch(
+        `/api/transactions?source=project_tracker&externalId=${project.id}`
+      );
+      const existing = searchRes.ok ? await searchRes.json() : [];
+
+      const transactionData = {
+        description: `${project.projectName}${project.clientName ? ` - ${project.clientName}` : ""}`,
+        amount: project.cost,
+        type: "income",
+        categoryId,
+        date: project.date || `${project.month}-01`,
+        source: "project_tracker",
+        externalId: project.id,
+      };
+
+      if (existing.length > 0) {
+        await fetch(`/api/transactions/${existing[0].id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transactionData),
+        });
+      } else {
+        await fetch("/api/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projects: projectList, teams: teamList }),
+          body: JSON.stringify(transactionData),
         });
-      } catch (error) {
-        console.error("Error saving project tracker data:", error);
       }
-    }, 500);
+    } catch (error) {
+      console.error("Error syncing project to transaction:", error);
+    }
+  }, [ensureServicesCategory]);
+
+  const deleteSyncedTransaction = useCallback(async (projectId: string) => {
+    try {
+      const searchRes = await fetch(
+        `/api/transactions?source=project_tracker&externalId=${projectId}`
+      );
+      const existing = searchRes.ok ? await searchRes.json() : [];
+
+      if (existing.length > 0) {
+        await fetch(`/api/transactions/${existing[0].id}`, { method: "DELETE" });
+      }
+    } catch (error) {
+      console.error("Error deleting synced transaction:", error);
+    }
   }, []);
+
+  // --- Data Loading ---
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/project-tracker-data");
+      const [response, meRes] = await Promise.all([
+        fetch("/api/project-tracker-data"),
+        fetch("/api/me"),
+      ]);
 
       if (!response.ok) {
         throw new Error("Failed to fetch data");
       }
 
-      const data = await response.json();
-      const projectList = data.projects || [];
-      const teamList = data.teams || [];
-
+      const projectList = await response.json();
       setProjects(projectList);
-      setTeams(teamList);
       setStats(calculateStats(projectList, selectedMonth));
+
+      if (meRes.ok) {
+        const user = await meRes.json();
+        setIsAdmin(user.role === "admin");
+      }
     } catch (error) {
       console.error("Error loading project tracker data:", error);
       setProjects([]);
-      setTeams([]);
       setStats({ totalProjects: 0, totalPaid: 0, totalUnpaid: 0, totalRevenue: 0 });
     } finally {
       setLoading(false);
@@ -115,57 +197,78 @@ export function ProjectTrackerProvider({ children }: { children: ReactNode }) {
     setStats(calculateStats(projects, selectedMonth));
   }, [selectedMonth, projects, calculateStats]);
 
+  // --- CRUD Operations ---
+
   const addProject = async (project: Omit<Project, "id" | "createdAt">): Promise<Project | null> => {
-    const newProject: Project = {
-      ...project,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    const updatedProjects = [...projects, newProject];
-    setProjects(updatedProjects);
-    setStats(calculateStats(updatedProjects, selectedMonth));
+    try {
+      const res = await fetch("/api/project-tracker-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(project),
+      });
 
-    // Auto-add team if new
-    let updatedTeams = teams;
-    if (project.teamName && !teams.includes(project.teamName)) {
-      updatedTeams = [...teams, project.teamName];
-      setTeams(updatedTeams);
+      if (!res.ok) throw new Error("Failed to create project");
+
+      const newProject = await res.json();
+      const updatedProjects = [...projects, newProject];
+      setProjects(updatedProjects);
+      setStats(calculateStats(updatedProjects, selectedMonth));
+
+      syncProjectToTransaction(newProject);
+      return newProject;
+    } catch (error) {
+      console.error("Error adding project:", error);
+      return null;
     }
-
-    saveToServer(updatedProjects, updatedTeams);
-    return newProject;
   };
 
   const updateProject = async (id: string, updates: Partial<Project>): Promise<Project | null> => {
-    const updatedProjects = projects.map(p =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    setProjects(updatedProjects);
-    setStats(calculateStats(updatedProjects, selectedMonth));
+    try {
+      const res = await fetch("/api/project-tracker-data", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updates }),
+      });
 
-    let updatedTeams = teams;
-    if (updates.teamName && !teams.includes(updates.teamName)) {
-      updatedTeams = [...teams, updates.teamName];
-      setTeams(updatedTeams);
+      if (!res.ok) throw new Error("Failed to update project");
+
+      const updatedProject = await res.json();
+      const updatedProjects = projects.map(p =>
+        p.id === id ? updatedProject : p
+      );
+      setProjects(updatedProjects);
+      setStats(calculateStats(updatedProjects, selectedMonth));
+
+      if (updatedProject.cost && updatedProject.cost > 0) {
+        syncProjectToTransaction(updatedProject);
+      } else {
+        deleteSyncedTransaction(id);
+      }
+
+      return updatedProject;
+    } catch (error) {
+      console.error("Error updating project:", error);
+      return null;
     }
-
-    saveToServer(updatedProjects, updatedTeams);
-    return updatedProjects.find(p => p.id === id) || null;
   };
 
   const deleteProject = async (id: string): Promise<boolean> => {
-    const updatedProjects = projects.filter(p => p.id !== id);
-    setProjects(updatedProjects);
-    setStats(calculateStats(updatedProjects, selectedMonth));
-    saveToServer(updatedProjects, teams);
-    return true;
-  };
+    try {
+      const res = await fetch(`/api/project-tracker-data?projectId=${id}`, {
+        method: "DELETE",
+      });
 
-  const addTeam = (name: string) => {
-    if (!teams.includes(name)) {
-      const updated = [...teams, name];
-      setTeams(updated);
-      saveToServer(projects, updated);
+      if (!res.ok) throw new Error("Failed to delete project");
+
+      const updatedProjects = projects.filter(p => p.id !== id);
+      setProjects(updatedProjects);
+      setStats(calculateStats(updatedProjects, selectedMonth));
+
+      deleteSyncedTransaction(id);
+      return true;
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      return false;
     }
   };
 
@@ -173,15 +276,14 @@ export function ProjectTrackerProvider({ children }: { children: ReactNode }) {
     <ProjectTrackerContext.Provider
       value={{
         projects,
-        teams,
         stats,
         selectedMonth,
         setSelectedMonth,
         loading,
+        isAdmin,
         addProject,
         updateProject,
         deleteProject,
-        addTeam,
         refreshData: loadData,
       }}
     >

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useDateFilter } from "../DateFilterContext";
 
 interface Category {
   id: string;
@@ -29,6 +30,7 @@ const frequencies = [
 ];
 
 export default function RecurringPage() {
+  const { getDateRange, filter, customRange } = useDateFilter();
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,11 +48,7 @@ export default function RecurringPage() {
   const [processing, setProcessing] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -75,7 +73,11 @@ export default function RecurringPage() {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const filteredCategories = categories.filter((c) => c.type === formData.type);
 
@@ -221,9 +223,15 @@ export default function RecurringPage() {
     });
   };
 
-  const filteredRecurring = categoryFilter === "all"
-    ? recurring
-    : recurring.filter((r) => r.categoryId === categoryFilter);
+  const filteredRecurring = recurring.filter((r) => {
+    if (categoryFilter !== "all" && r.categoryId !== categoryFilter) return false;
+    const { start, end } = getDateRange();
+    if (start && end) {
+      const nextDate = r.nextDate.split("T")[0];
+      if (nextDate < start || nextDate > end) return false;
+    }
+    return true;
+  });
 
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useDateFilter } from "./DateFilterContext";
 
 interface Category {
   id: string;
@@ -19,6 +20,7 @@ interface Transaction {
 }
 
 export default function TransactionsPage() {
+  const { getDateRange, filter, customRange } = useDateFilter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,17 +37,19 @@ export default function TransactionsPage() {
     date: new Date().toISOString().split("T")[0],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
+    const { start, end } = getDateRange();
+    let txUrl = "/api/transactions";
+    if (start && end) {
+      txUrl += `?startDate=${start}&endDate=${end}`;
+    }
+
     try {
       const [transRes, catRes] = await Promise.all([
-        fetch("/api/transactions", { signal: controller.signal }),
+        fetch(txUrl, { signal: controller.signal }),
         fetch("/api/categories", { signal: controller.signal }),
       ]);
 
@@ -64,7 +68,11 @@ export default function TransactionsPage() {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  };
+  }, [getDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, filter, customRange]);
 
   const filteredCategories = categories.filter((c) => c.type === formData.type);
 
@@ -137,6 +145,10 @@ export default function TransactionsPage() {
       const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
       if (res.ok) {
         setTransactions(transactions.filter((t) => t.id !== id));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("Delete failed:", res.status, err);
+        alert(`Failed to delete: ${err.error || res.statusText}`);
       }
     } catch (error) {
       console.error("Error deleting transaction:", error);

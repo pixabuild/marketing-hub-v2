@@ -365,10 +365,16 @@ body {
   border-color: var(--accent);
 }
 
-.date-input::-webkit-calendar-picker-indicator {
+.date-input::-webkit-calendar-picker-indicator,
+.month-input::-webkit-calendar-picker-indicator {
   filter: invert(1);
   opacity: 0.6;
   cursor: pointer;
+}
+
+.filter-select.month-input {
+  background-image: none;
+  padding-right: 18px;
 }
 
 .date-separator {
@@ -720,6 +726,7 @@ input, select, textarea {
   font-size: 0.95rem;
   font-family: 'Space Grotesk', sans-serif;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -983,6 +990,11 @@ tbody tr:hover {
   gap: 12px;
   margin-bottom: 24px;
   flex-wrap: wrap;
+}
+
+.filter-bar .filter-select {
+  width: auto;
+  flex: 0 0 auto;
 }
 
 /* Modal backdrop */
@@ -2246,7 +2258,8 @@ tbody tr:hover {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
   padding: 14px 16px;
   background: var(--bg-surface);
@@ -2259,7 +2272,8 @@ tbody tr:hover {
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
@@ -3996,6 +4010,11 @@ button.project-dropdown-btn svg {
 
 .subtask-add-btn:hover {
   opacity: 0.9;
+}
+
+/* Wide modal variant */
+.modal-box.modal-wide {
+  max-width: 620px;
 }
 
 /* ===== PROJECT TRACKER STYLES ===== */

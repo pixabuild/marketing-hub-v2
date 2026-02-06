@@ -6,14 +6,12 @@ import { useProjectTrackerContext } from "./ProjectTrackerContext";
 export default function ProjectTrackerPage() {
   const {
     projects,
-    teams,
     selectedMonth,
-    setSelectedMonth,
     loading,
+    isAdmin,
     addProject,
     updateProject,
     deleteProject,
-    addTeam,
   } = useProjectTrackerContext();
 
   const [showModal, setShowModal] = useState(false);
@@ -23,38 +21,14 @@ export default function ProjectTrackerPage() {
     clientName: "",
     description: "",
     cost: "",
+    date: new Date().toISOString().split("T")[0],
     status: "unpaid" as "paid" | "unpaid" | "partial",
-    teamName: "",
   });
-
-  // Generate month tabs for the current year
-  const monthTabs = useMemo(() => {
-    const year = new Date().getFullYear();
-    const months = [];
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(year, i, 1);
-      const value = `${year}-${String(i + 1).padStart(2, "0")}`;
-      const label = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-      months.push({ value, label });
-    }
-    return months;
-  }, []);
 
   // Filter projects for selected month
   const monthProjects = useMemo(() => {
     return projects.filter((p) => p.month === selectedMonth);
   }, [projects, selectedMonth]);
-
-  // Group by team
-  const groupedByTeam = useMemo(() => {
-    const groups: Record<string, typeof monthProjects> = {};
-    monthProjects.forEach((p) => {
-      const team = p.teamName || "Uncategorized";
-      if (!groups[team]) groups[team] = [];
-      groups[team].push(p);
-    });
-    return groups;
-  }, [monthProjects]);
 
   const editingProject = useMemo(() => {
     if (!editingProjectId) return null;
@@ -71,8 +45,8 @@ export default function ProjectTrackerPage() {
       clientName: "",
       description: "",
       cost: "",
+      date: new Date().toISOString().split("T")[0],
       status: "unpaid",
-      teamName: teams[0] || "",
     });
     setShowModal(true);
   };
@@ -84,8 +58,8 @@ export default function ProjectTrackerPage() {
       clientName: project.clientName,
       description: project.description,
       cost: project.cost !== null ? String(project.cost) : "",
+      date: project.date || new Date().toISOString().split("T")[0],
       status: project.status,
-      teamName: project.teamName,
     });
     setShowModal(true);
   };
@@ -97,9 +71,9 @@ export default function ProjectTrackerPage() {
       clientName: formData.clientName,
       description: formData.description,
       cost: formData.cost ? parseFloat(formData.cost) : null,
+      date: formData.date,
       status: formData.status,
       month: selectedMonth,
-      teamName: formData.teamName,
     };
 
     if (editingProject) {
@@ -132,21 +106,6 @@ export default function ProjectTrackerPage() {
 
   return (
     <>
-      {/* Month Tabs */}
-      <div className="month-tabs-container">
-        <div className="month-tabs">
-          {monthTabs.map((tab) => (
-            <button
-              key={tab.value}
-              className={`month-tab ${selectedMonth === tab.value ? "active" : ""}`}
-              onClick={() => setSelectedMonth(tab.value)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Actions Bar */}
       <div className="tracker-actions">
         <button className="btn btn-glow" onClick={openAddModal}>
@@ -166,66 +125,64 @@ export default function ProjectTrackerPage() {
           <button className="btn btn-glow" onClick={openAddModal}>Add your first project</button>
         </div>
       ) : (
-        Object.entries(groupedByTeam).map(([team, teamProjects]) => (
-          <div key={team} className="team-section">
-            <div className="team-header">
-              <span className="team-name">{team}</span>
-              <span className="team-count">{teamProjects.length} project{teamProjects.length !== 1 ? "s" : ""}</span>
-            </div>
-            <div className="tracker-table-wrapper">
-              <table className="tracker-table">
-                <thead>
-                  <tr>
-                    <th>Project Name</th>
-                    <th>Client Name</th>
-                    <th>Description</th>
-                    <th>Cost</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamProjects.map((project) => (
-                    <tr key={project.id}>
-                      <td className="td-name">{project.projectName}</td>
-                      <td className="td-client">{project.clientName}</td>
-                      <td className="td-desc">{project.description}</td>
-                      <td className="td-cost">{project.cost !== null ? formatCurrency(project.cost) : "—"}</td>
-                      <td>
-                        <button
-                          className={`status-badge ${project.status}`}
-                          onClick={() => cycleStatus(project)}
-                          title="Click to change status"
-                        >
-                          {project.status.toUpperCase()}
-                        </button>
-                      </td>
-                      <td className="td-actions">
-                        <button className="action-btn edit" onClick={() => openEditModal(project)} title="Edit">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                          </svg>
-                        </button>
-                        <button className="action-btn delete" onClick={() => handleDelete(project.id)} title="Delete">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))
+        <div className="tracker-table-wrapper" style={{ borderRadius: 10 }}>
+          <table className="tracker-table">
+            <thead>
+              <tr>
+                <th>Project Name</th>
+                <th>Client Name</th>
+                <th>Description</th>
+                <th>Date</th>
+                {isAdmin && <th>Cost</th>}
+                {isAdmin && <th>Status</th>}
+                {isAdmin && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {monthProjects.map((project) => (
+                <tr key={project.id}>
+                  <td className="td-name">{project.projectName}</td>
+                  <td className="td-client">{project.clientName}</td>
+                  <td className="td-desc">{project.description}</td>
+                  <td className="td-date">{project.date ? new Date(project.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</td>
+                  {isAdmin && <td className="td-cost">{project.cost !== null ? formatCurrency(project.cost) : "—"}</td>}
+                  {isAdmin && (
+                    <td>
+                      <button
+                        className={`status-badge ${project.status}`}
+                        onClick={() => cycleStatus(project)}
+                        title="Click to change status"
+                      >
+                        {project.status.toUpperCase()}
+                      </button>
+                    </td>
+                  )}
+                  {isAdmin && (
+                    <td className="td-actions">
+                      <button className="action-btn edit" onClick={() => openEditModal(project)} title="Edit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </button>
+                      <button className="action-btn delete" onClick={() => handleDelete(project.id)} title="Delete">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="modal-backdrop open" onClick={() => setShowModal(false)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-box modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
               <h2>{editingProject ? "Edit Project" : "New Project"}</h2>
               <button className="modal-x" onClick={() => setShowModal(false)}>&times;</button>
@@ -259,48 +216,45 @@ export default function ProjectTrackerPage() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Project description"
-                    rows={3}
+                    rows={5}
                   />
-                </div>
-                <div className="field">
-                  <label>Team</label>
-                  <input
-                    type="text"
-                    value={formData.teamName}
-                    onChange={(e) => setFormData({ ...formData, teamName: e.target.value })}
-                    placeholder="e.g., DESIGN TEAM"
-                    list="team-list"
-                    required
-                  />
-                  <datalist id="team-list">
-                    {teams.map((t) => (
-                      <option key={t} value={t} />
-                    ))}
-                  </datalist>
                 </div>
                 <div className="field-row">
                   <div className="field">
-                    <label>Cost</label>
+                    <label>Date</label>
                     <input
-                      type="number"
-                      value={formData.cost}
-                      onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                      placeholder="0"
-                      step="0.01"
-                      min="0"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      required
                     />
                   </div>
-                  <div className="field">
-                    <label>Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as "paid" | "unpaid" | "partial" })}
-                    >
-                      <option value="unpaid">Unpaid</option>
-                      <option value="paid">Paid</option>
-                      <option value="partial">Partial</option>
-                    </select>
-                  </div>
+                  {isAdmin && (
+                    <>
+                      <div className="field">
+                        <label>Cost</label>
+                        <input
+                          type="number"
+                          value={formData.cost}
+                          onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                          placeholder="0"
+                          step="0.01"
+                          min="0"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Status</label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "paid" | "unpaid" | "partial" })}
+                        >
+                          <option value="unpaid">Unpaid</option>
+                          <option value="paid">Paid</option>
+                          <option value="partial">Partial</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="modal-foot">

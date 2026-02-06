@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const type = searchParams.get("type");
+    const source = searchParams.get("source");
+    const externalId = searchParams.get("externalId");
 
     const transactions = await prisma.transaction.findMany({
       where: {
@@ -26,6 +28,8 @@ export async function GET(request: NextRequest) {
           },
         } : {}),
         ...(type ? { type } : {}),
+        ...(source ? { source } : {}),
+        ...(externalId ? { externalId } : {}),
       },
       include: {
         category: true,
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { description, amount, type, categoryId, date } = body;
+    const { description, amount, type, categoryId, date, source, externalId } = body;
 
     if (!description || amount === undefined || !type || !date) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -64,7 +68,8 @@ export async function POST(request: NextRequest) {
         type,
         categoryId: categoryId || null,
         date: new Date(date),
-        source: "manual",
+        source: source || "manual",
+        externalId: externalId || null,
       },
       include: {
         category: true,

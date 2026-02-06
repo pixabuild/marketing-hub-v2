@@ -240,8 +240,8 @@ export async function syncTransactionToAffiliateHQ(transaction: {
   externalId?: string | null;
   source?: string | null;
 }) {
-  // Only sync manual transactions (not ones already from AffiliateHQ)
-  if (transaction.source === "affiliatehq") return;
+  // Only sync manual transactions (not ones from AffiliateHQ or ProjectTracker)
+  if (transaction.source === "affiliatehq" || transaction.source === "project_tracker") return;
 
   // For now, we don't auto-create entries in AffiliateHQ from Financial Tracker
   // because AffiliateHQ entries require a project context

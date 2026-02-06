@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { ProjectTrackerProvider, useProjectTrackerContext } from "./ProjectTrackerContext";
 import GlobalSearch from "@/components/GlobalSearch";
 
 function ProjectTrackerLayoutInner({ children }: { children: React.ReactNode }) {
-  const { stats } = useProjectTrackerContext();
+  const { stats, selectedMonth, setSelectedMonth, isAdmin } = useProjectTrackerContext();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(value);
@@ -25,6 +30,14 @@ function ProjectTrackerLayoutInner({ children }: { children: React.ReactNode }) 
           </div>
         </div>
         <div className="header-right">
+          <div className="date-filter-container">
+            <input
+              type="month"
+              className="filter-select month-input"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            />
+          </div>
           <GlobalSearch />
           <Link href="/dashboard" className="home-btn" title="Back to Hub">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -34,40 +47,34 @@ function ProjectTrackerLayoutInner({ children }: { children: React.ReactNode }) 
         </div>
       </header>
 
-      <div className="stats-grid">
-        <div className="stat-card balance">
-          <div className="shine"></div>
-          <div className="stat-label">
-            <div className="stat-icon">#</div>
-            <span>PROJECTS</span>
+      {isAdmin && (
+        <div className="stats-grid">
+          <div className="stat-card balance">
+            <div className="shine"></div>
+            <div className="stat-label">
+              <div className="stat-icon">&#10003;</div>
+              <span>PAID</span>
+            </div>
+            <div className="stat-value">{formatCurrency(stats.totalPaid)}</div>
           </div>
-          <div className="stat-value">{stats.totalProjects}</div>
-        </div>
-        <div className="stat-card income">
-          <div className="shine"></div>
-          <div className="stat-label">
-            <div className="stat-icon">$</div>
-            <span>REVENUE</span>
+          <div className="stat-card expense">
+            <div className="shine"></div>
+            <div className="stat-label">
+              <div className="stat-icon">!</div>
+              <span>UNPAID</span>
+            </div>
+            <div className="stat-value">{formatCurrency(stats.totalUnpaid)}</div>
           </div>
-          <div className="stat-value">{formatCurrency(stats.totalRevenue)}</div>
-        </div>
-        <div className="stat-card income">
-          <div className="shine"></div>
-          <div className="stat-label">
-            <div className="stat-icon">&#10003;</div>
-            <span>PAID</span>
+          <div className="stat-card income">
+            <div className="shine"></div>
+            <div className="stat-label">
+              <div className="stat-icon">$</div>
+              <span>REVENUE</span>
+            </div>
+            <div className="stat-value">{formatCurrency(stats.totalRevenue)}</div>
           </div>
-          <div className="stat-value">{stats.totalPaid}</div>
         </div>
-        <div className="stat-card expense">
-          <div className="shine"></div>
-          <div className="stat-label">
-            <div className="stat-icon">!</div>
-            <span>UNPAID</span>
-          </div>
-          <div className="stat-value">{stats.totalUnpaid}</div>
-        </div>
-      </div>
+      )}
 
       <section className="view active">
         {children}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useDateFilter } from "../DateFilterContext";
 
 interface Category {
   id: string;
@@ -22,6 +23,7 @@ interface Transaction {
 }
 
 export default function CategoriesPage() {
+  const { getDateRange, filter, customRange } = useDateFilter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryTotals, setCategoryTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -34,18 +36,20 @@ export default function CategoriesPage() {
     color: "#8b5cf6",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const { start, end } = getDateRange();
+    let txUrl = "/api/transactions";
+    if (start && end) {
+      txUrl += `?startDate=${start}&endDate=${end}`;
+    }
 
     try {
       const [catRes, txRes] = await Promise.all([
         fetch("/api/categories", { signal: controller.signal }),
-        fetch("/api/transactions", { signal: controller.signal }),
+        fetch(txUrl, { signal: controller.signal }),
       ]);
 
       if (catRes.ok) {
@@ -70,7 +74,11 @@ export default function CategoriesPage() {
       clearTimeout(timeoutId);
       setLoading(false);
     }
-  };
+  }, [getDateRange]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, filter, customRange]);
 
   const fetchCategories = async () => {
     try {

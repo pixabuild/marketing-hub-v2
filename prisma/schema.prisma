@@ -24,6 +24,7 @@ model User {
   todoProjects       TodoProject[]
   todoCategories     TodoCategory[]
   todos              Todo[]
+  billingProjects    BillingProject[]
 
   @@map("users")
 }
@@ -209,6 +210,25 @@ model Budget {
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@map("budgets")
+}
+
+// ============ PROJECT TRACKER (BILLING) ============
+
+model BillingProject {
+  id          String   @id @default(cuid())
+  projectName String
+  clientName  String
+  description String   @default("")
+  cost        Float?
+  status      String   @default("unpaid") // paid, unpaid, partial
+  date        DateTime @db.Date
+  month       String   // "2026-02" for month filtering
+  userId      String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("billing_projects")
 }
 
 // ============ TODO DASHBOARD ============

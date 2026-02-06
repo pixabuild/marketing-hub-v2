@@ -46,8 +46,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let step = "start";
   try {
+    step = "params";
     const { id } = await params;
+
+    step = "auth";
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -55,24 +59,39 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the transaction first to get externalId and type
+    step = "findTransaction";
     const existingTransaction = await prisma.transaction.findUnique({
       where: { id },
       select: { externalId: true, type: true, source: true },
     });
 
+    step = "deleteTransaction";
     await prisma.transaction.delete({
       where: { id },
     });
 
-    // Delete synced AffiliateHQ entry if linked and originally from AffiliateHQ
+    // Delete synced AffiliateHQ entry if linked
     if (existingTransaction?.source === "affiliatehq") {
+      step = "deleteAffiliateHQ";
       await deleteSyncedAffiliateHQEntry(existingTransaction.externalId, existingTransaction.type);
+    }
+
+    // Delete synced project if from ProjectTracker
+    if (existingTransaction?.source === "project_tracker" && existingTransaction.externalId) {
+      step = "deleteBillingProject";
+      try {
+        await prisma.billingProject.delete({
+          where: { id: existingTransaction.externalId },
+        });
+      } catch {
+        // Project may not exist
+      }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting transaction:", error);
-    return NextResponse.json({ error: "Failed to delete transaction" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`Error deleting transaction at step "${step}":`, msg, error);
+    return NextResponse.json({ error: `${step}: ${msg}` }, { status: 500 });
   }
 }
