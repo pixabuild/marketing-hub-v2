@@ -47,6 +47,7 @@ export default function UsersPage() {
     affiliateHQ: false,
     financialTracker: false,
     todoDashboard: false,
+    projectTracker: false,
     projectIds: [] as string[],
   });
 
@@ -98,6 +99,7 @@ export default function UsersPage() {
       affiliateHQ: false,
       financialTracker: false,
       todoDashboard: false,
+      projectTracker: false,
       projectIds: [],
     });
     setShowModal(true);
@@ -114,6 +116,9 @@ export default function UsersPage() {
     const hasTodoDashboard = user.appPermissions.some(
       (p) => p.appName === "todo_dashboard" && p.canAccess
     );
+    const hasProjectTracker = user.appPermissions.some(
+      (p) => p.appName === "project_tracker" && p.canAccess
+    );
     setFormData({
       email: user.email,
       name: user.name,
@@ -122,6 +127,7 @@ export default function UsersPage() {
       affiliateHQ: hasAffiliateHQ,
       financialTracker: hasFinancialTracker,
       todoDashboard: hasTodoDashboard,
+      projectTracker: hasProjectTracker,
       projectIds: user.projectPermissions.map((p) => p.project.id),
     });
     setShowModal(true);
@@ -134,6 +140,7 @@ export default function UsersPage() {
       affiliate_hq: formData.affiliateHQ,
       financial_tracker: formData.financialTracker,
       todo_dashboard: formData.todoDashboard,
+      project_tracker: formData.projectTracker,
     };
 
     try {
@@ -280,6 +287,9 @@ export default function UsersPage() {
                       {user.appPermissions.some(p => p.appName === "todo_dashboard" && p.canAccess) && (
                         <span className="app-badge taskhub">TaskHub</span>
                       )}
+                      {user.appPermissions.some(p => p.appName === "project_tracker" && p.canAccess) && (
+                        <span className="app-badge projecthub">ProjectHub</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -381,6 +391,14 @@ export default function UsersPage() {
                         onChange={(e) => setFormData({ ...formData, todoDashboard: e.target.checked })}
                       />
                       <span>TaskHub - Todo Dashboard</span>
+                    </label>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.projectTracker}
+                        onChange={(e) => setFormData({ ...formData, projectTracker: e.target.checked })}
+                      />
+                      <span>ProjectHub - Billing Tracker</span>
                     </label>
                   </div>
                 </div>

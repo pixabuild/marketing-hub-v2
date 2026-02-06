@@ -13,6 +13,7 @@ interface DashboardClientProps {
     affiliate_hq: boolean;
     financial_tracker: boolean;
     todo_dashboard: boolean;
+    project_tracker: boolean;
   };
 }
 
@@ -34,6 +35,8 @@ export default function DashboardClient({ user, appPermissions }: DashboardClien
       router.push("/affiliate-hq");
     } else if (app === "todo") {
       router.push("/todo-dashboard");
+    } else if (app === "projects") {
+      router.push("/project-tracker");
     } else if (app === "users") {
       router.push("/dashboard/users");
     }
@@ -102,6 +105,21 @@ export default function DashboardClient({ user, appPermissions }: DashboardClien
           <div className={`app-status ${appPermissions.todo_dashboard ? "active" : "no-access"}`}>
             <span className="status-dot"></span>
             {appPermissions.todo_dashboard ? "Active" : "No Access"}
+          </div>
+        </div>
+
+        <div
+          className={`app-card projects ${!appPermissions.project_tracker ? "disabled" : ""}`}
+          onClick={() => appPermissions.project_tracker && openApp("projects")}
+          style={!appPermissions.project_tracker ? { cursor: "not-allowed", opacity: 0.5 } : {}}
+        >
+          <div className="shine"></div>
+          <div className="app-icon">P</div>
+          <h2>ProjectHub - Billing Tracker</h2>
+          <p>Track client projects, monthly billing status, team assignments, and revenue by month.</p>
+          <div className={`app-status ${appPermissions.project_tracker ? "active" : "no-access"}`}>
+            <span className="status-dot"></span>
+            {appPermissions.project_tracker ? "Active" : "No Access"}
           </div>
         </div>
 
