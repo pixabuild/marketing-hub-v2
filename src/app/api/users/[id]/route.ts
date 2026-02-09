@@ -206,6 +206,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
     }
 
+    // Reassign billing projects to admin before deleting
+    await prisma.billingProject.updateMany({
+      where: { userId: id },
+      data: { userId: currentUser.id },
+    });
+
     await prisma.user.delete({
       where: { id },
     });
