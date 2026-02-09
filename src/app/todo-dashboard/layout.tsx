@@ -1,11 +1,34 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { TodoProvider, useTodoContext } from "./TodoContext";
 import GlobalSearch from "@/components/GlobalSearch";
 
 function TodoDashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { stats } = useTodoContext();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const overrides: Record<string, string> = {
+      "--accent": "#ec4899",
+      "--accent-secondary": "#f472b6",
+      "--mesh-1": "rgba(236, 72, 153, 0.15)",
+      "--mesh-2": "rgba(244, 114, 182, 0.1)",
+      "--mesh-3": "rgba(249, 168, 212, 0.05)",
+    };
+    const originals: Record<string, string> = {};
+    for (const [key, val] of Object.entries(overrides)) {
+      originals[key] = root.style.getPropertyValue(key);
+      root.style.setProperty(key, val);
+    }
+    return () => {
+      for (const [key, val] of Object.entries(originals)) {
+        if (val) root.style.setProperty(key, val);
+        else root.style.removeProperty(key);
+      }
+    };
+  }, []);
 
   return (
     <div className="app">

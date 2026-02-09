@@ -10,6 +10,25 @@ function ProjectTrackerLayoutInner({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    const root = document.documentElement;
+    const overrides: Record<string, string> = {
+      "--accent": "#f97316",
+      "--accent-secondary": "#ea580c",
+      "--mesh-1": "rgba(249, 115, 22, 0.15)",
+      "--mesh-2": "rgba(234, 88, 12, 0.1)",
+      "--mesh-3": "rgba(251, 146, 60, 0.05)",
+    };
+    const originals: Record<string, string> = {};
+    for (const [key, val] of Object.entries(overrides)) {
+      originals[key] = root.style.getPropertyValue(key);
+      root.style.setProperty(key, val);
+    }
+    return () => {
+      for (const [key, val] of Object.entries(originals)) {
+        if (val) root.style.setProperty(key, val);
+        else root.style.removeProperty(key);
+      }
+    };
   }, []);
 
   const formatCurrency = (value: number) =>

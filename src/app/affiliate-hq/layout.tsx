@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { DateFilterProvider, useDateFilter } from "./DateFilterContext";
@@ -22,6 +22,28 @@ function AffiliateHQLayoutInner({ children }: { children: React.ReactNode }) {
     deleteProject,
     isAdmin,
   } = useDateFilter();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const overrides: Record<string, string> = {
+      "--accent": "#3b82f6",
+      "--accent-secondary": "#6366f1",
+      "--mesh-1": "rgba(59, 130, 246, 0.15)",
+      "--mesh-2": "rgba(99, 102, 241, 0.1)",
+      "--mesh-3": "rgba(96, 165, 250, 0.05)",
+    };
+    const originals: Record<string, string> = {};
+    for (const [key, val] of Object.entries(overrides)) {
+      originals[key] = root.style.getPropertyValue(key);
+      root.style.setProperty(key, val);
+    }
+    return () => {
+      for (const [key, val] of Object.entries(originals)) {
+        if (val) root.style.setProperty(key, val);
+        else root.style.removeProperty(key);
+      }
+    };
+  }, []);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
