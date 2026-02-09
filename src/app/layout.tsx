@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = localFont({
-  src: "../fonts/SpaceGrotesk-Variable.woff2",
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
-  display: "swap",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
-const jetbrainsMono = localFont({
-  src: "../fonts/JetBrainsMono-Variable.woff2",
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
-  display: "swap",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
