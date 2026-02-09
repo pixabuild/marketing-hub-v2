@@ -377,6 +377,36 @@ body {
   padding-right: 18px;
 }
 
+.month-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.month-nav-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.month-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  min-width: 130px;
+  text-align: center;
+}
+
 .date-separator {
   color: var(--text-muted);
   font-size: 0.85rem;

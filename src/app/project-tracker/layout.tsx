@@ -31,12 +31,31 @@ function ProjectTrackerLayoutInner({ children }: { children: React.ReactNode }) 
         </div>
         <div className="header-right">
           <div className="date-filter-container">
-            <input
-              type="month"
-              className="filter-select month-input"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            />
+            <button
+              className="month-nav-btn"
+              onClick={() => {
+                const [y, m] = selectedMonth.split("-").map(Number);
+                const d = new Date(y, m - 2, 1);
+                setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+              }}
+              title="Previous month"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span className="month-label">
+              {new Date(Number(selectedMonth.split("-")[0]), Number(selectedMonth.split("-")[1]) - 1).toLocaleString("en-US", { month: "long", year: "numeric" })}
+            </span>
+            <button
+              className="month-nav-btn"
+              onClick={() => {
+                const [y, m] = selectedMonth.split("-").map(Number);
+                const d = new Date(y, m, 1);
+                setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+              }}
+              title="Next month"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
           </div>
           <GlobalSearch />
           <Link href="/dashboard" className="home-btn" title="Back to Hub">
