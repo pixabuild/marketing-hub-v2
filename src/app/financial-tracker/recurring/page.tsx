@@ -30,7 +30,7 @@ const frequencies = [
 ];
 
 export default function RecurringPage() {
-  const { getDateRange, filter, customRange } = useDateFilter();
+  const { filter, customRange } = useDateFilter();
   const [recurring, setRecurring] = useState<RecurringTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,11 +225,6 @@ export default function RecurringPage() {
 
   const filteredRecurring = recurring.filter((r) => {
     if (categoryFilter !== "all" && r.categoryId !== categoryFilter) return false;
-    const { start, end } = getDateRange();
-    if (start && end) {
-      const nextDate = r.nextDate.split("T")[0];
-      if (nextDate < start || nextDate > end) return false;
-    }
     return true;
   });
 
