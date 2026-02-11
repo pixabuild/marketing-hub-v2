@@ -206,6 +206,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
     }
 
+    // Get the user being deleted to find their Supabase Auth account
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Reassign billing projects to admin before deleting
     await prisma.billingProject.updateMany({
       where: { userId: id },
@@ -215,6 +221,16 @@ export async function DELETE(
     await prisma.user.delete({
       where: { id },
     });
+
+    // Delete from Supabase Auth so they can't log back in
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const adminClient = createAdminClient();
+      const { data: usersData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const authUser = usersData?.users.find(u => u.email === targetUser.email);
+      if (authUser) {
+        await adminClient.auth.admin.deleteUser(authUser.id);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
