@@ -49,6 +49,320 @@ body {
   position: relative;
 }
 
+/* ============ APP SHELL & SIDEBAR ============ */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 64px 1fr;
+}
+
+.main-content {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(12, 12, 18, 0.88);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 0;
+}
+
+/* Sidebar Brand */
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 16px 16px;
+  min-height: 64px;
+}
+
+.sidebar-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none !important;
+  color: var(--text-primary) !important;
+}
+
+.sidebar-logo {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sidebar-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.sidebar.collapsed .sidebar-brand {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px 12px;
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+  flex: 1;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 8px;
+}
+
+.sidebar-app {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.sidebar-app:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary) !important;
+}
+
+.sidebar-app.active {
+  background: var(--bg-hover);
+  color: var(--text-primary) !important;
+}
+
+.sidebar-app-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-chevron {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  opacity: 0.5;
+}
+
+.sidebar-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Sub Navigation */
+.sidebar-sub-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 4px 0;
+}
+
+.sidebar-sub-item {
+  display: block;
+  padding: 8px 12px 8px 56px;
+  border-radius: 8px;
+  text-decoration: none !important;
+  color: var(--text-muted) !important;
+  font-size: 0.84rem;
+  font-weight: 400;
+  transition: all 0.15s ease;
+}
+
+.sidebar-sub-item:hover {
+  color: var(--text-secondary) !important;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-sub-item.active {
+  color: var(--text-primary) !important;
+  font-weight: 500;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 0 8px 16px;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-logout:hover {
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--expense);
+}
+
+/* Collapsed sidebar adjustments */
+.sidebar.collapsed .sidebar-app {
+  justify-content: center;
+  padding: 10px 8px;
+  border-left: none;
+}
+
+.sidebar.collapsed .sidebar-app-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.sidebar.collapsed .sidebar-user {
+  justify-content: center;
+  padding: 10px 8px;
+}
+
+.sidebar.collapsed .sidebar-logout {
+  justify-content: center;
+  padding: 10px 8px;
+}
+
+.sidebar.collapsed .sidebar-footer .sidebar-divider {
+  margin: 8px 4px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+  }
+
+  .sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+}
+
+/* ============ END SIDEBAR ============ */
+
 /* Animated mesh gradient background */
 .bg-mesh {
   position: fixed;
@@ -1702,30 +2016,6 @@ tbody tr:hover {
 
 .app-card.disabled .shine {
   display: none;
-}
-
-/* Logout button */
-.logout-btn {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  padding: 10px 20px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 10;
-}
-
-.logout-btn:hover {
-  border-color: var(--expense);
-  color: var(--expense);
-  background: var(--bg-hover);
 }
 
 /* Footer */

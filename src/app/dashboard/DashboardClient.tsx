@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 interface DashboardClientProps {
@@ -19,14 +18,7 @@ interface DashboardClientProps {
 
 export default function DashboardClient({ user, appPermissions }: DashboardClientProps) {
   const router = useRouter();
-  const supabase = createClient();
   const isAdmin = user.role === "admin";
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
 
   const openApp = (app: string) => {
     if (app === "finance") {
@@ -46,8 +38,6 @@ export default function DashboardClient({ user, appPermissions }: DashboardClien
 
   return (
     <div className="view active">
-      <button className="logout-btn" onClick={handleLogout}>Sign Out</button>
-
       <div className="dashboard-header">
         <div className="brand">
           <div className="brand-logo large">
