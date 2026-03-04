@@ -130,6 +130,16 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
     }
   }, [getDateRange]);
 
+  // Auto-process due recurring transactions on load
+  useEffect(() => {
+    fetch("/api/recurring/process", { method: "POST" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.processed > 0) fetchStats();
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchStats();
   }, [filter, customRange, fetchStats]);
