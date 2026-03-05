@@ -28,41 +28,44 @@ export async function POST() {
     const created: string[] = [];
 
     for (const r of dueRecurring) {
-      // Create the transaction
-      const transaction = await prisma.transaction.create({
-        data: {
-          description: r.description,
-          amount: r.amount,
-          type: r.type,
-          categoryId: r.categoryId,
-          date: r.nextDate,
-          source: "recurring",
-        },
-      });
-
-      created.push(transaction.id);
-
-      // Calculate next date based on frequency
       const nextDate = new Date(r.nextDate);
-      switch (r.frequency) {
-        case "daily":
-          nextDate.setDate(nextDate.getDate() + 1);
-          break;
-        case "weekly":
-          nextDate.setDate(nextDate.getDate() + 7);
-          break;
-        case "biweekly":
-          nextDate.setDate(nextDate.getDate() + 14);
-          break;
-        case "monthly":
-          nextDate.setMonth(nextDate.getMonth() + 1);
-          break;
-        case "yearly":
-          nextDate.setFullYear(nextDate.getFullYear() + 1);
-          break;
+
+      // Loop through all missed periods until nextDate is in the future
+      while (nextDate <= today) {
+        const transaction = await prisma.transaction.create({
+          data: {
+            description: r.description,
+            amount: r.amount,
+            type: r.type,
+            categoryId: r.categoryId,
+            date: new Date(nextDate),
+            source: "recurring",
+          },
+        });
+
+        created.push(transaction.id);
+
+        // Advance to next period
+        switch (r.frequency) {
+          case "daily":
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case "weekly":
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case "biweekly":
+            nextDate.setDate(nextDate.getDate() + 14);
+            break;
+          case "monthly":
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case "yearly":
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+        }
       }
 
-      // Update recurring transaction with new next date
+      // Update recurring transaction with the next future date
       await prisma.recurringTransaction.update({
         where: { id: r.id },
         data: { nextDate },
