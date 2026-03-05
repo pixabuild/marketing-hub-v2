@@ -42,10 +42,15 @@ export async function GET(request: NextRequest) {
       where: {
         projectId: projectId ? projectId : { in: projectIds },
         ...(startDate && endDate ? {
-          expenseDate: {
-            gte: new Date(startDate),
-            lte: new Date(endDate),
-          },
+          OR: [
+            {
+              expenseDate: {
+                gte: new Date(startDate),
+                lte: new Date(endDate),
+              },
+            },
+            { expenseType: "recurring" },
+          ],
         } : {}),
       },
       orderBy: { expenseDate: "desc" },
