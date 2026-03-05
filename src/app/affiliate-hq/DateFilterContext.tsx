@@ -153,6 +153,9 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
 
     fetchProjects();
     fetchUserRole();
+
+    // Auto-process due recurring expenses
+    fetch("/api/expenses/process", { method: "POST" }).catch(() => {});
   }, []);
 
   // Function to fetch stats - can be called manually to refresh
