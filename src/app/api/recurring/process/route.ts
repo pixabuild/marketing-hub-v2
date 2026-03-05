@@ -32,18 +32,29 @@ export async function POST() {
 
       // Loop through all missed periods until nextDate is in the future
       while (nextDate <= today) {
-        const transaction = await prisma.transaction.create({
-          data: {
+        // Check if already generated to prevent duplicates
+        const existing = await prisma.transaction.findFirst({
+          where: {
             description: r.description,
             amount: r.amount,
-            type: r.type,
-            categoryId: r.categoryId,
             date: new Date(nextDate),
             source: "recurring",
           },
         });
 
-        created.push(transaction.id);
+        if (!existing) {
+          const transaction = await prisma.transaction.create({
+            data: {
+              description: r.description,
+              amount: r.amount,
+              type: r.type,
+              categoryId: r.categoryId,
+              date: new Date(nextDate),
+              source: "recurring",
+            },
+          });
+          created.push(transaction.id);
+        }
 
         // Advance to next period
         switch (r.frequency) {

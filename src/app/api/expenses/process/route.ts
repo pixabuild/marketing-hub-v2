@@ -28,19 +28,31 @@ export async function POST() {
       const nextDate = new Date(expense.expenseDate);
 
       while (nextDate < today) {
-        // Create a one-time copy for this period
-        await prisma.expense.create({
-          data: {
+        // Check if already generated to prevent duplicates
+        const existing = await prisma.expense.findFirst({
+          where: {
             projectId: expense.projectId,
-            category: expense.category,
             description: expense.description,
             amount: expense.amount,
-            expenseType: "generated",
-            frequency: null,
             expenseDate: new Date(nextDate),
+            expenseType: "generated",
           },
         });
-        created++;
+
+        if (!existing) {
+          await prisma.expense.create({
+            data: {
+              projectId: expense.projectId,
+              category: expense.category,
+              description: expense.description,
+              amount: expense.amount,
+              expenseType: "generated",
+              frequency: null,
+              expenseDate: new Date(nextDate),
+            },
+          });
+          created++;
+        }
 
         // Advance to next period
         switch (expense.frequency) {
